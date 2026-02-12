@@ -78,7 +78,7 @@ PeopleFlow vise donc à offrir une alternative “light” : les fonctionnalité
 
 ## Roadmap (Agile / sprints hebdomadaires)
 
-> Début : vendredi 23 janvier
+> Début : Jeudi 12 Février 2026
 
 - **Sprint 1 — Fondations & sécurité** : base projet, DB, auth, rôles, Swagger
 - **Sprint 2 — Employés (PA)** : CRUD employés + UI
