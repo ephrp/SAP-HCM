@@ -1,24 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {
+  LeaveRequest,
+  LeaveService,
+  LeaveStatus,
+  LeaveType,
+} from '../../../../core/services/leave.service';
 
-type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
-type LeaveType = 'Annual' | 'Sick' | 'Unpaid' | 'Remote';
 type ToastType = 'success' | 'error';
-
-interface ApprovalItem {
-  id: number;
-  employeeName: string;
-  email: string;
-  department: string;
-  type: LeaveType;
-  startDate: string;
-  endDate: string;
-  days: number;
-  status: LeaveStatus;
-  createdAt: string;
-  note?: string;
-}
 
 @Component({
   selector: 'app-approvals',
@@ -41,49 +31,13 @@ export class ApprovalsComponent {
   toastType: ToastType = 'success';
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  approvals: ApprovalItem[] = [
-    {
-      id: 301,
-      employeeName: 'Jean Dupont',
-      email: 'jean.dupont@company.com',
-      department: 'IT',
-      type: 'Annual',
-      startDate: '2026-03-10',
-      endDate: '2026-03-14',
-      days: 5,
-      status: 'Pending',
-      createdAt: '2026-02-10',
-      note: 'Vacances famille',
-    },
-    {
-      id: 302,
-      employeeName: 'Amina Diallo',
-      email: 'amina.diallo@company.com',
-      department: 'HR',
-      type: 'Sick',
-      startDate: '2026-03-05',
-      endDate: '2026-03-06',
-      days: 2,
-      status: 'Pending',
-      createdAt: '2026-02-18',
-      note: 'Repos médical',
-    },
-    {
-      id: 303,
-      employeeName: 'Paul Martin',
-      email: 'paul.martin@company.com',
-      department: 'Finance',
-      type: 'Unpaid',
-      startDate: '2026-03-01',
-      endDate: '2026-03-03',
-      days: 3,
-      status: 'Approved',
-      createdAt: '2026-02-09',
-      note: 'Motif personnel',
-    },
-  ];
+  approvals: LeaveRequest[] = [];
 
-  get filteredApprovals(): ApprovalItem[] {
+  constructor(private leaveService: LeaveService) {
+    this.approvals = this.leaveService.getLeaves();
+  }
+
+  get filteredApprovals(): LeaveRequest[] {
     const q = this.search.trim().toLowerCase();
 
     return this.approvals.filter((item) => {
@@ -91,7 +45,7 @@ export class ApprovalsComponent {
         !q ||
         item.employeeName.toLowerCase().includes(q) ||
         item.email.toLowerCase().includes(q) ||
-        item.department.toLowerCase().includes(q);
+        (item.department ?? '').toLowerCase().includes(q);
 
       const matchStatus =
         this.statusFilter === 'All' || item.status === this.statusFilter;
@@ -108,8 +62,8 @@ export class ApprovalsComponent {
   }
 
   get pendingCount(): number {
-  return this.approvals.filter((a) => a.status === 'Pending').length;
-}
+    return this.approvals.filter((a) => a.status === 'Pending').length;
+  }
 
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.totalItems / this.pageSize));
@@ -123,7 +77,7 @@ export class ApprovalsComponent {
     return Math.min(this.startIndex + this.pageSize, this.totalItems);
   }
 
-  get paginatedApprovals(): ApprovalItem[] {
+  get paginatedApprovals(): LeaveRequest[] {
     if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
     if (this.currentPage < 1) this.currentPage = 1;
 
@@ -153,17 +107,15 @@ export class ApprovalsComponent {
     this.goToPage(this.currentPage - 1);
   }
 
-  approve(item: ApprovalItem): void {
-    this.approvals = this.approvals.map((a) =>
-      a.id === item.id ? { ...a, status: 'Approved' } : a
-    );
+  approve(item: LeaveRequest): void {
+    this.leaveService.approveLeave(item.id);
+    this.approvals = this.leaveService.getLeaves();
     this.showToastMessage('Request approved.', 'success');
   }
 
-  reject(item: ApprovalItem): void {
-    this.approvals = this.approvals.map((a) =>
-      a.id === item.id ? { ...a, status: 'Rejected' } : a
-    );
+  reject(item: LeaveRequest): void {
+    this.leaveService.rejectLeave(item.id);
+    this.approvals = this.leaveService.getLeaves();
     this.showToastMessage('Request rejected.', 'error');
   }
 

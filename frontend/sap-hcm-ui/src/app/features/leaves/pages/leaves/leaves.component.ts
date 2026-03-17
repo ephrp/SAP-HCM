@@ -1,23 +1,15 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {
+  LeaveRequest,
+  LeaveService,
+  LeaveStatus,
+  LeaveType,
+} from '../../../../core/services/leave.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
-type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
-type LeaveType = 'Annual' | 'Sick' | 'Unpaid' | 'Remote';
 type ToastType = 'success' | 'error';
-
-interface LeaveRequest {
-  id: number;
-  employeeName: string;
-  email: string;
-  type: LeaveType;
-  startDate: string;
-  endDate: string;
-  days: number;
-  status: LeaveStatus;
-  createdAt: string;
-  note?: string;
-}
 
 @Component({
   selector: 'app-leaves',
@@ -46,50 +38,19 @@ export class LeavesComponent {
     note: '',
   };
 
-  // Toast
   showToast = false;
   toastMessage = '';
   toastType: ToastType = 'success';
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  leaves: LeaveRequest[] = [
-    {
-      id: 101,
-      employeeName: 'Jean Dupont',
-      email: 'jean.dupont@company.com',
-      type: 'Annual',
-      startDate: '2026-03-10',
-      endDate: '2026-03-14',
-      days: 5,
-      status: 'Pending',
-      createdAt: '2026-02-10',
-      note: 'Vacances famille',
-    },
-    {
-      id: 102,
-      employeeName: 'Marie Roy',
-      email: 'marie.roy@company.com',
-      type: 'Sick',
-      startDate: '2026-02-12',
-      endDate: '2026-02-13',
-      days: 2,
-      status: 'Approved',
-      createdAt: '2026-02-11',
-      note: 'Certificat médical transmis',
-    },
-    {
-      id: 103,
-      employeeName: 'Paul Martin',
-      email: 'paul.martin@company.com',
-      type: 'Unpaid',
-      startDate: '2026-03-01',
-      endDate: '2026-03-03',
-      days: 3,
-      status: 'Rejected',
-      createdAt: '2026-02-09',
-      note: 'Période critique Finance',
-    },
-  ];
+  leaves: LeaveRequest[] = [];
+
+  constructor(
+    private leaveService: LeaveService,
+    public authService: AuthService
+  ) {
+    this.leaves = this.leaveService.getLeaves();
+  }
 
   get filteredLeaves(): LeaveRequest[] {
     const q = this.search.trim().toLowerCase();
@@ -137,6 +98,10 @@ export class LeavesComponent {
     return this.calculateDays(this.form.startDate, this.form.endDate);
   }
 
+  get canManageLeaves(): boolean {
+    return this.authService.isManager() || this.authService.isHrAdmin();
+  }
+
   resetFilters(): void {
     this.search = '';
     this.statusFilter = 'All';
@@ -161,16 +126,18 @@ export class LeavesComponent {
   }
 
   approve(leave: LeaveRequest): void {
-    this.leaves = this.leaves.map((item) =>
-      item.id === leave.id ? { ...item, status: 'Approved' } : item
-    );
+    if (!this.canManageLeaves) return;
+
+    this.leaveService.approveLeave(leave.id);
+    this.leaves = this.leaveService.getLeaves();
     this.showToastMessage('Leave request approved.', 'success');
   }
 
   reject(leave: LeaveRequest): void {
-    this.leaves = this.leaves.map((item) =>
-      item.id === leave.id ? { ...item, status: 'Rejected' } : item
-    );
+    if (!this.canManageLeaves) return;
+
+    this.leaveService.rejectLeave(leave.id);
+    this.leaves = this.leaveService.getLeaves();
     this.showToastMessage('Leave request rejected.', 'error');
   }
 
@@ -213,6 +180,7 @@ export class LeavesComponent {
       id: nextId,
       employeeName: this.form.employeeName.trim(),
       email: this.form.email.trim(),
+      department: 'Unknown',
       type: this.form.type,
       startDate: this.form.startDate,
       endDate: this.form.endDate,
@@ -222,7 +190,9 @@ export class LeavesComponent {
       note: this.form.note.trim(),
     };
 
-    this.leaves = [newLeave, ...this.leaves];
+    this.leaveService.addLeave(newLeave);
+    this.leaves = this.leaveService.getLeaves();
+
     this.currentPage = 1;
     this.resetForm();
     this.closeModal();

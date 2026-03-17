@@ -106,23 +106,29 @@
           </td>
 
           <td class="actions">
-            <button
-              class="btn btn--ghost btn--sm"
-              type="button"
-              (click)="approve(leave)"
-              [disabled]="leave.status === 'Approved'"
-            >
-              Approve
-            </button>
+            <ng-container *ngIf="canManageLeaves; else employeeView">
+              <button
+                class="btn btn--ghost btn--sm"
+                type="button"
+                (click)="approve(leave)"
+                [disabled]="leave.status === 'Approved'"
+              >
+                Approve
+              </button>
 
-            <button
-              class="btn btn--ghost btn--sm danger"
-              type="button"
-              (click)="reject(leave)"
-              [disabled]="leave.status === 'Rejected'"
-            >
-              Reject
-            </button>
+              <button
+                class="btn btn--ghost btn--sm danger"
+                type="button"
+                (click)="reject(leave)"
+                [disabled]="leave.status === 'Rejected'"
+              >
+                Reject
+              </button>
+            </ng-container>
+
+            <ng-template #employeeView>
+              <span class="muted">No action</span>
+            </ng-template>
           </td>
         </tr>
 
@@ -255,7 +261,7 @@
     </div>
   </div>
 
-    <!-- Toast -->
+  <!-- Toast -->
   <div
     class="toast"
     *ngIf="showToast"
