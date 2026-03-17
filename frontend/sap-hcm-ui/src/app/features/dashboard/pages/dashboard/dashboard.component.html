@@ -1,0 +1,162 @@
+<section class="dash">
+  <div class="dash__header">
+    <div>
+      <h1>Dashboard RH</h1>
+      <p>Vue synthèse des indicateurs clés (MVP).</p>
+    </div>
+
+    <div class="dash__actions">
+      <button class="btn btn--ghost" type="button">Exporter</button>
+      <button class="btn btn--ghost" type="button" (click)="openVideo()">Voir la démo</button>
+      <button class="btn" type="button">Actualiser</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <article class="card">
+      <p class="card__label">Effectif total</p>
+      <p class="card__value kpi-pop">{{ animated.totalEmployees }}</p>
+      <p class="card__hint">Employés actifs</p>
+    </article>
+
+    <article class="card">
+      <p class="card__label">Congés en attente</p>
+      <p class="card__value kpi-pop">{{ animated.pendingLeaves }}</p>
+      <p class="card__hint">Demandes à valider</p>
+    </article>
+
+    <article class="card">
+      <p class="card__label">Heures de formation</p>
+      <p class="card__value kpi-pop">{{ animated.trainingHours }}</p>
+      <p class="card__hint">Total (période)</p>
+    </article>
+
+    <article class="card">
+      <p class="card__label">Départements</p>
+      <p class="card__value kpi-pop">{{ animated.departments }}</p>
+      <p class="card__hint">Répartition interne</p>
+    </article>
+  </div>
+
+  <div class="grid">
+    <article class="panel chart">
+  <div class="chart__head">
+    <div>
+      <h2>Évolution de l’effectif</h2>
+      <p class="muted">6 derniers mois</p>
+    </div>
+    <div class="chart__meta">
+      <span class="chip">+12%</span>
+      <span class="chip chip--ghost">Tendance</span>
+    </div>
+  </div>
+
+  <div class="chart__wrap" aria-label="Employee chart">
+    <svg viewBox="0 0 720 220" class="chart__svg" role="img">
+      <!-- Axes -->
+      <line x1="40" y1="180" x2="690" y2="180" class="axis"></line>
+      <line x1="40" y1="30" x2="40" y2="180" class="axis"></line>
+
+      <!-- Grid lines -->
+      <line x1="40" y1="140" x2="690" y2="140" class="grid"></line>
+      <line x1="40" y1="100" x2="690" y2="100" class="grid"></line>
+      <line x1="40" y1="60" x2="690" y2="60" class="grid"></line>
+
+      <!-- Line path (fake data: 18, 19, 20, 21, 23, 24) -->
+      <path
+        class="line"
+        d="M 70 150
+           L 170 145
+           L 270 135
+           L 370 125
+           L 470 95
+           L 570 85"
+      ></path>
+
+      <!-- Fill under the line -->
+      <path
+        class="fill"
+        d="M 70 150
+           L 170 145
+           L 270 135
+           L 370 125
+           L 470 95
+           L 570 85
+           L 570 180
+           L 70 180 Z"
+      ></path>
+
+      <!-- Points -->
+      <circle cx="70" cy="150" r="5" class="dot"></circle>
+      <circle cx="170" cy="145" r="5" class="dot"></circle>
+      <circle cx="270" cy="135" r="5" class="dot"></circle>
+      <circle cx="370" cy="125" r="5" class="dot"></circle>
+      <circle cx="470" cy="95" r="5" class="dot"></circle>
+      <circle cx="570" cy="85" r="5" class="dot"></circle>
+
+      <!-- Labels -->
+      <text x="62" y="205" class="label">Oct</text>
+      <text x="162" y="205" class="label">Nov</text>
+      <text x="262" y="205" class="label">Déc</text>
+      <text x="362" y="205" class="label">Jan</text>
+      <text x="462" y="205" class="label">Fév</text>
+      <text x="562" y="205" class="label">Mar</text>
+
+      <!-- Value hint (top) -->
+      <text x="600" y="50" class="hint">24 employés</text>
+    </svg>
+  </div>
+</article>
+
+
+    
+  </div>
+
+  <!-- Video block (embed) -->
+  <div class="video">
+    <div class="video__header">
+      <div>
+        <h2>Demo / Présentation</h2>
+        <p class="muted">Une courte vidéo pour expliquer le produit (MVP).</p>
+      </div>
+      <button class="btn btn--ghost" type="button" (click)="openVideo()">Plein écran</button>
+    </div>
+
+    <div class="video__frame">
+      <!-- Remplace le lien par ta future démo -->
+      <iframe
+        src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+        title="SAP-HCM Demo"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+      ></iframe>
+
+      <button class="video__play" type="button" (click)="openVideo()">
+        ▶
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal fullscreen video -->
+  <div class="modal" *ngIf="showVideo" (click)="closeVideo()">
+    <div class="modal__content" (click)="$event.stopPropagation()">
+      <div class="modal__top">
+        <strong>Démo SAP-HCM</strong>
+        <button class="icon-btn" type="button" (click)="closeVideo()">✕</button>
+      </div>
+
+      <div class="modal__frame">
+        <iframe
+          src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+          title="SAP-HCM Demo Fullscreen"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+
+      <p class="modal__hint muted">Astuce : appuie sur Échap pour fermer.</p>
+    </div>
+  </div>
+</section>

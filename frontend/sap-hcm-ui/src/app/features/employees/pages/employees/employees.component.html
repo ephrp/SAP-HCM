@@ -1,0 +1,346 @@
+<section class="employees">
+  <div class="employees__header">
+    <div>
+      <h1>Employees</h1>
+      <p>Gestion des employés de l’entreprise.</p>
+    </div>
+
+    <button class="btn btn--primary" type="button" (click)="openCreate()">+ Add employee</button>
+
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar__left">
+      <div class="search">
+        <span class="search__icon">⌕</span>
+        <input
+          class="search__input"
+          type="text"
+          placeholder="Rechercher : nom, email, département, poste..."
+          [(ngModel)]="search"
+        />
+      </div>
+
+      <div class="filters">
+        <label class="field">
+          <span class="field__label">Département</span>
+          <select class="field__control" [(ngModel)]="departmentFilter">
+            <option value="All">Tous</option>
+            <option *ngFor="let d of departments" [value]="d">{{ d }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Statut</span>
+          <select class="field__control" [(ngModel)]="statusFilter">
+            <option value="All">Tous</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </label>
+
+        <button class="btn btn--ghost" type="button" (click)="resetFilters()">Reset</button>
+      </div>
+    </div>
+
+    <div class="toolbar__right">
+      <span class="count">{{ totalItems }} résultat(s)</span>
+    </div>
+  </div>
+
+  <!-- Bulk bar (shows only when selectedCount > 0) -->
+  <div class="bulkbar" *ngIf="selectedCount > 0">
+    <div class="bulkbar__left">
+      <span class="bulkbar__count">{{ selectedCount }} sélectionné(s)</span>
+      <button class="link" type="button" (click)="clearSelection()">Clear</button>
+    </div>
+
+    <div class="bulkbar__right">
+      <button class="btn btn--ghost" type="button" (click)="bulkSetActive()">Set Active</button>
+      <button class="btn btn--ghost" type="button" (click)="bulkSetInactive()">Set Inactive</button>
+      <button class="btn btn--danger" type="button" (click)="openBulkDelete()">Delete</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="panel">
+    <table class="table">
+      <thead>
+        <tr>
+          <th class="th-check">
+            <input
+              type="checkbox"
+              [checked]="isAllPageSelected"
+              (change)="toggleSelectAllPage()"
+              aria-label="Select all on page"
+            />
+          </th>
+
+          <th class="th-sort" (click)="setSort('id')">
+            ID <span class="sort">{{ sortIcon('id') }}</span>
+          </th>
+
+          <th class="th-sort" (click)="setSort('name')">
+            Employé <span class="sort">{{ sortIcon('name') }}</span>
+          </th>
+
+          <th class="th-sort" (click)="setSort('email')">
+            Email <span class="sort">{{ sortIcon('email') }}</span>
+          </th>
+
+          <th class="th-sort" (click)="setSort('department')">
+            Département <span class="sort">{{ sortIcon('department') }}</span>
+          </th>
+
+          <th class="th-sort" (click)="setSort('position')">
+            Poste <span class="sort">{{ sortIcon('position') }}</span>
+          </th>
+
+          <th class="th-sort" (click)="setSort('status')">
+            Status <span class="sort">{{ sortIcon('status') }}</span>
+          </th>
+
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr
+          *ngFor="let employee of paginatedEmployees"
+          [class.row--selected]="isSelected(employee.id)"
+        >
+          <td class="td-check">
+            <input
+              type="checkbox"
+              [checked]="isSelected(employee.id)"
+              (change)="toggleSelect(employee.id)"
+              aria-label="Select employee"
+            />
+          </td>
+
+          <td class="mono">{{ employee.id }}</td>
+
+          <td>
+            <div class="emp">
+              <img
+                class="emp__avatar"
+                [src]="getAvatar(employee)"
+                [alt]="employee.firstName + ' ' + employee.lastName"
+              />
+              <div class="emp__meta">
+                <div class="emp__name">{{ employee.firstName }} {{ employee.lastName }}</div>
+                <div class="emp__sub muted">{{ employee.position }}</div>
+              </div>
+            </div>
+          </td>
+
+          <td class="muted">{{ employee.email }}</td>
+          <td>{{ employee.department }}</td>
+          <td>{{ employee.position }}</td>
+
+          <td>
+            <span
+              class="badge"
+              [class.badge--active]="employee.status === 'Active'"
+              [class.badge--inactive]="employee.status === 'Inactive'"
+            >
+              {{ employee.status }}
+            </span>
+          </td>
+
+          <td class="actions">
+            <button class="icon-btn" type="button" title="Edit" (click)="openEdit(employee)">
+              ✏️
+            </button>
+            <button
+              class="icon-btn icon-btn--danger"
+              type="button"
+              title="Delete"
+              (click)="openDelete(employee)"
+            >
+              🗑
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="totalItems === 0">
+          <td colspan="8" class="empty">Aucun employé ne correspond aux filtres.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Footer: pagination -->
+    <div class="table-footer" *ngIf="totalItems > 0">
+      <div class="table-footer__left">
+        <span class="muted">Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}</span>
+      </div>
+
+      <div class="table-footer__right">
+        <label class="page-size">
+          <span class="muted">Rows</span>
+          <select
+            class="page-size__select"
+            [(ngModel)]="pageSize"
+            (ngModelChange)="onPageSizeChange()"
+          >
+            <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+          </select>
+        </label>
+
+        <div class="pager">
+          <button
+            class="btn btn--ghost"
+            type="button"
+            (click)="prevPage()"
+            [disabled]="currentPage === 1"
+          >
+            ←
+          </button>
+
+          <button
+            *ngFor="let p of pages"
+            class="page-btn"
+            type="button"
+            [class.page-btn--active]="p === currentPage"
+            (click)="goToPage(p)"
+          >
+            {{ p }}
+          </button>
+
+          <button
+            class="btn btn--ghost"
+            type="button"
+            (click)="nextPage()"
+            [disabled]="currentPage === totalPages"
+          >
+            →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div class="modal" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal__content" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <h2>{{ modalMode === 'create' ? 'Ajouter un employé' : 'Modifier un employé' }}</h2>
+          <p class="muted">
+            {{ modalMode === 'create' ? "Données mock (frontend)." : "Modification mock (frontend)." }}
+          </p>
+        </div>
+        <button class="icon-btn" type="button" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="form">
+        <div class="form__grid">
+          <label class="field">
+            <span class="field__label">First name *</span>
+            <input class="field__control" [(ngModel)]="form.firstName" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Last name *</span>
+            <input class="field__control" [(ngModel)]="form.lastName" />
+          </label>
+
+          <label class="field field--full">
+            <span class="field__label">Email *</span>
+            <input class="field__control" type="email" [(ngModel)]="form.email" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Department</span>
+            <input class="field__control" [(ngModel)]="form.department" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Position</span>
+            <input class="field__control" [(ngModel)]="form.position" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Status</span>
+            <select class="field__control" [(ngModel)]="form.status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </label>
+
+          <label class="field field--full">
+            <span class="field__label">Photo URL (optionnel)</span>
+            <input class="field__control" [(ngModel)]="form.photoUrl" />
+          </label>
+        </div>
+
+        <div class="upload">
+          <div class="upload__left">
+            <label class="upload__btn">
+              Upload photo
+              <input type="file" accept="image/*" (change)="onFileSelected($event)" hidden />
+            </label>
+            <p class="muted upload__hint">PNG/JPG — preview immédiat.</p>
+          </div>
+
+          <div class="upload__preview">
+            <img
+              class="preview"
+              [src]="form.photoUrl || 'https://i.pravatar.cc/150?u=' + (form.email || 'employee')"
+              alt="Preview"
+            />
+          </div>
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn btn--ghost" type="button" (click)="closeModal()">Cancel</button>
+          <button class="btn" type="button" (click)="saveEmployee()">
+            {{ modalMode === 'create' ? 'Add employee' : 'Save changes' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Single Delete Confirm Modal -->
+  <div class="modal" *ngIf="showDelete" (click)="closeDelete()">
+    <div class="modal__content modal__content--small" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <h2>Supprimer</h2>
+          <p class="muted">
+            Voulez-vous supprimer
+            <strong>{{ deleteTarget?.firstName }} {{ deleteTarget?.lastName }}</strong> ?
+          </p>
+        </div>
+        <button class="icon-btn" type="button" (click)="closeDelete()">✕</button>
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn btn--ghost" type="button" (click)="closeDelete()">Cancel</button>
+        <button class="btn btn--danger" type="button" (click)="confirmDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Delete Confirm Modal -->
+  <div class="modal" *ngIf="showBulkDelete" (click)="closeBulkDelete()">
+    <div class="modal__content modal__content--small" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <h2>Supprimer en masse</h2>
+          <p class="muted">
+            Voulez-vous supprimer <strong>{{ selectedCount }}</strong> employé(s) ?
+          </p>
+        </div>
+        <button class="icon-btn" type="button" (click)="closeBulkDelete()">✕</button>
+      </div>
+
+      <div class="modal__actions">
+        <button class="btn btn--ghost" type="button" (click)="closeBulkDelete()">Cancel</button>
+        <button class="btn btn--danger" type="button" (click)="confirmBulkDelete()">Delete</button>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,55 @@
+<section class="login">
+  <div class="login__card">
+    <div class="login__brand">
+      <span class="dot"></span>
+      <span class="brand">PeopleFlow</span>
+      <span class="tag">MVP</span>
+    </div>
+
+    <div class="login__header">
+      <h1>Connexion</h1>
+      <p>Authentification mock avec rôles.</p>
+    </div>
+
+    <div class="form">
+      <label class="field">
+        <span class="field__label">Email</span>
+        <input
+          class="field__control"
+          type="email"
+          [(ngModel)]="email"
+          placeholder="ex: admin@peopleflow.com"
+        />
+      </label>
+
+      <label class="field">
+        <span class="field__label">Password</span>
+        <input
+          class="field__control"
+          type="password"
+          [(ngModel)]="password"
+          placeholder="••••••••"
+        />
+      </label>
+
+      <label class="field">
+        <span class="field__label">Rôle</span>
+        <select class="field__control" [(ngModel)]="role">
+          <option value="EMPLOYEE">EMPLOYEE</option>
+          <option value="MANAGER">MANAGER</option>
+          <option value="HR_ADMIN">HR_ADMIN</option>
+        </select>
+      </label>
+
+      <p class="error" *ngIf="error">{{ error }}</p>
+
+      <button class="btn btn--primary" type="button" (click)="submit()">
+        Login
+      </button>
+    </div>
+
+    <div class="login__hint">
+      <p>Exemple : entre n’importe quel email + mot de passe, puis choisis un rôle.</p>
+    </div>
+  </div>
+</section>

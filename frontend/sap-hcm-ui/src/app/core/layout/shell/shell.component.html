@@ -1,0 +1,66 @@
+<header class="topbar">
+  <div class="topbar__inner">
+    <div class="brand">
+      <span class="brand__dot"></span>
+      <span class="brand__name">PeopleFlow</span>
+      <span class="brand__tag">MVP</span>
+    </div>
+
+    <nav class="nav">
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Dashboard
+      </a>
+
+      <a
+        *ngIf="authService.isHrAdmin()"
+        routerLink="/employees"
+        routerLinkActive="active"
+      >
+        Employees
+      </a>
+
+      <a
+        routerLink="/leaves"
+        routerLinkActive="active"
+      >
+        Leaves
+      </a>
+
+      <a
+  *ngIf="authService.isManager() || authService.isHrAdmin()"
+  routerLink="/approvals"
+  routerLinkActive="active"
+>
+  Approvals
+</a>
+
+      <a
+        routerLink="/trainings"
+        routerLinkActive="active"
+      >
+        Trainings
+      </a>
+    </nav>
+
+    <div class="userbox" *ngIf="user">
+      <div class="userbox__meta">
+        <span class="userbox__name">{{ user.name }}</span>
+        <span class="userbox__role">{{ user.role }}</span>
+      </div>
+
+      <button class="logout-btn" type="button" (click)="logout()">
+        Logout
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="page__inner">
+    <router-outlet></router-outlet>
+  </div>
+</main>

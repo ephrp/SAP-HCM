@@ -1,0 +1,145 @@
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #ececf1;
+}
+
+.topbar__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #111;
+}
+
+.brand__name {
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  font-size: 15px;
+}
+
+.brand__tag {
+  font-size: 12px;
+  padding: 3px 8px;
+  border: 1px solid #ececf1;
+  border-radius: 999px;
+  color: #6b7280;
+}
+
+.nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.nav a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 600;
+  padding: 9px 12px;
+  border-radius: 12px;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.nav a:hover {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+}
+
+.nav a.active {
+  background: #111;
+  color: #fff;
+}
+
+.userbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userbox__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+
+.userbox__name {
+  font-size: 13px;
+  font-weight: 800;
+  color: #111;
+}
+
+.userbox__role {
+  font-size: 11px;
+  font-weight: 800;
+  color: #7c3aed;
+  letter-spacing: 0.03em;
+}
+
+.logout-btn {
+  border: 1px solid #ececf1;
+  background: #fff;
+  color: #111;
+  padding: 9px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  background: #f8f8fb;
+  box-shadow: 0 8px 20px rgba(17, 17, 17, 0.06);
+}
+
+.page {
+  background: #f5f6f8;
+  min-height: calc(100vh - 64px);
+}
+
+.page__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 22px 18px;
+}
+
+@media (max-width: 960px) {
+  .topbar__inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .userbox {
+    flex-direction: column;
+  }
+
+  .userbox__meta {
+    align-items: center;
+  }
+
+  .nav {
+    justify-content: center;
+  }
+}

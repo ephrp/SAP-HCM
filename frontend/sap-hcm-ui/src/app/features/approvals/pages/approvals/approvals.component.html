@@ -1,0 +1,194 @@
+<section class="approvals">
+  <div class="approvals__header">
+    <div>
+      <h1>Approvals</h1>
+      <p>Validation des demandes de congés de l’équipe.</p>
+    </div>
+
+    <div class="approvals__summary">
+      <div class="summary-card">
+        <span class="summary-card__label">Pending</span>
+        <span class="summary-card__value">
+          {{ pendingCount }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar__left">
+      <div class="search">
+        <span class="search__icon">⌕</span>
+        <input
+          class="search__input"
+          type="text"
+          placeholder="Rechercher : nom, email, département..."
+          [(ngModel)]="search"
+        />
+      </div>
+
+      <div class="filters">
+        <label class="field">
+          <span class="field__label">Type</span>
+          <select class="field__control" [(ngModel)]="typeFilter">
+            <option value="All">Tous</option>
+            <option value="Annual">Annual</option>
+            <option value="Sick">Sick</option>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Remote">Remote</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Statut</span>
+          <select class="field__control" [(ngModel)]="statusFilter">
+            <option value="All">Tous</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </label>
+
+        <button class="btn btn--ghost" type="button" (click)="resetFilters()">Reset</button>
+      </div>
+    </div>
+
+    <div class="toolbar__right">
+      <span class="count">{{ totalItems }} résultat(s)</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Employé</th>
+          <th>Département</th>
+          <th>Type</th>
+          <th>Période</th>
+          <th>Jours</th>
+          <th>Status</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let item of paginatedApprovals">
+          <td class="mono">{{ item.id }}</td>
+
+          <td>
+            <div class="who">
+              <div class="who__name">{{ item.employeeName }}</div>
+              <div class="who__sub muted">{{ item.email }}</div>
+            </div>
+          </td>
+
+          <td>{{ item.department }}</td>
+
+          <td>
+            <span class="chip">{{ item.type }}</span>
+          </td>
+
+          <td>
+            <span class="muted">{{ item.startDate }}</span>
+            <span class="muted">→</span>
+            <span class="muted">{{ item.endDate }}</span>
+          </td>
+
+          <td class="mono">{{ item.days }}</td>
+
+          <td>
+            <span
+              class="badge"
+              [class.badge--pending]="item.status === 'Pending'"
+              [class.badge--approved]="item.status === 'Approved'"
+              [class.badge--rejected]="item.status === 'Rejected'"
+            >
+              {{ item.status }}
+            </span>
+          </td>
+
+          <td class="actions">
+            <button
+              class="btn btn--ghost btn--sm"
+              type="button"
+              (click)="approve(item)"
+              [disabled]="item.status === 'Approved'"
+            >
+              Approve
+            </button>
+
+            <button
+              class="btn btn--ghost btn--sm danger"
+              type="button"
+              (click)="reject(item)"
+              [disabled]="item.status === 'Rejected'"
+            >
+              Reject
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="totalItems === 0">
+          <td colspan="8" class="empty">
+            <div class="empty__box">
+              <div class="empty__title">Aucun résultat</div>
+              <div class="muted">Essaie de modifier les filtres ou la recherche.</div>
+              <button class="btn btn--primary" type="button" (click)="resetFilters()">Reset</button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="table-footer" *ngIf="totalItems > 0">
+      <div class="table-footer__left">
+        <span class="muted">Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}</span>
+      </div>
+
+      <div class="table-footer__right">
+        <label class="page-size">
+          <span class="muted">Rows</span>
+          <select
+            class="page-size__select"
+            [(ngModel)]="pageSize"
+            (ngModelChange)="onPageSizeChange()"
+          >
+            <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+          </select>
+        </label>
+
+        <div class="pager">
+          <button class="btn btn--ghost" type="button" (click)="prevPage()" [disabled]="currentPage === 1">
+            ←
+          </button>
+
+          <button class="page-btn page-btn--active" type="button">
+            {{ currentPage }}
+          </button>
+
+          <button class="btn btn--ghost" type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="toast"
+    *ngIf="showToast"
+    [class.toast--success]="toastType === 'success'"
+    [class.toast--error]="toastType === 'error'"
+  >
+    <div class="toast__content">
+      <span class="toast__icon">
+        {{ toastType === 'success' ? '✓' : '⚠' }}
+      </span>
+      <span class="toast__message">{{ toastMessage }}</span>
+    </div>
+
+    <button class="toast__close" type="button" (click)="dismissToast()">✕</button>
+  </div>
+</section>

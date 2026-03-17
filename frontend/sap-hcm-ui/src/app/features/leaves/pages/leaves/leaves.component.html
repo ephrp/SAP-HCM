@@ -1,0 +1,276 @@
+<section class="leaves">
+  <div class="leaves__header">
+    <div>
+      <h1>Leaves</h1>
+      <p>Suivi des demandes de congés (MVP).</p>
+    </div>
+
+    <button class="btn btn--primary" type="button" (click)="openModal()">
+      + New request
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar__left">
+      <div class="search">
+        <span class="search__icon">⌕</span>
+        <input
+          class="search__input"
+          type="text"
+          placeholder="Rechercher : nom ou email..."
+          [(ngModel)]="search"
+        />
+      </div>
+
+      <div class="filters">
+        <label class="field">
+          <span class="field__label">Type</span>
+          <select class="field__control" [(ngModel)]="typeFilter">
+            <option value="All">Tous</option>
+            <option value="Annual">Annual</option>
+            <option value="Sick">Sick</option>
+            <option value="Unpaid">Unpaid</option>
+            <option value="Remote">Remote</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Statut</span>
+          <select class="field__control" [(ngModel)]="statusFilter">
+            <option value="All">Tous</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </label>
+
+        <button class="btn btn--ghost" type="button" (click)="resetFilters()">
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar__right">
+      <span class="count">{{ totalItems }} résultat(s)</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Employé</th>
+          <th>Type</th>
+          <th>Période</th>
+          <th>Jours</th>
+          <th>Créé le</th>
+          <th>Status</th>
+          <th class="th-actions">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let leave of paginatedLeaves">
+          <td class="mono">{{ leave.id }}</td>
+
+          <td>
+            <div class="who">
+              <div class="who__name">{{ leave.employeeName }}</div>
+              <div class="who__sub muted">{{ leave.email }}</div>
+            </div>
+          </td>
+
+          <td>
+            <span class="chip">{{ leave.type }}</span>
+          </td>
+
+          <td>
+            <span class="muted">{{ leave.startDate }}</span>
+            <span class="muted">→</span>
+            <span class="muted">{{ leave.endDate }}</span>
+          </td>
+
+          <td class="mono">{{ leave.days }}</td>
+          <td class="muted">{{ leave.createdAt }}</td>
+
+          <td>
+            <span
+              class="badge"
+              [class.badge--pending]="leave.status === 'Pending'"
+              [class.badge--approved]="leave.status === 'Approved'"
+              [class.badge--rejected]="leave.status === 'Rejected'"
+            >
+              {{ statusLabel(leave.status) }}
+            </span>
+          </td>
+
+          <td class="actions">
+            <button
+              class="btn btn--ghost btn--sm"
+              type="button"
+              (click)="approve(leave)"
+              [disabled]="leave.status === 'Approved'"
+            >
+              Approve
+            </button>
+
+            <button
+              class="btn btn--ghost btn--sm danger"
+              type="button"
+              (click)="reject(leave)"
+              [disabled]="leave.status === 'Rejected'"
+            >
+              Reject
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="totalItems === 0">
+          <td colspan="8" class="empty">
+            <div class="empty__box">
+              <div class="empty__title">Aucun résultat</div>
+              <div class="muted">Essaie de modifier les filtres ou la recherche.</div>
+              <button class="btn btn--primary" type="button" (click)="resetFilters()">
+                Reset
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="table-footer" *ngIf="totalItems > 0">
+      <div class="table-footer__left">
+        <span class="muted">Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}</span>
+      </div>
+
+      <div class="table-footer__right">
+        <label class="page-size">
+          <span class="muted">Rows</span>
+          <select
+            class="page-size__select"
+            [(ngModel)]="pageSize"
+            (ngModelChange)="onPageSizeChange()"
+          >
+            <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+          </select>
+        </label>
+
+        <div class="pager">
+          <button
+            class="btn btn--ghost"
+            type="button"
+            (click)="prevPage()"
+            [disabled]="currentPage === 1"
+          >
+            ←
+          </button>
+
+          <button class="page-btn page-btn--active" type="button">
+            {{ currentPage }}
+          </button>
+
+          <button
+            class="btn btn--ghost"
+            type="button"
+            (click)="nextPage()"
+            [disabled]="currentPage === totalPages"
+          >
+            →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal New Request -->
+  <div class="modal" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal__content" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <h2>New leave request</h2>
+          <p class="muted">Le statut sera automatiquement défini à <strong>Pending</strong>.</p>
+        </div>
+        <button class="icon-btn" type="button" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="form">
+        <div class="form__grid">
+          <label class="field">
+            <span class="field__label">Employee name *</span>
+            <input class="field__control" [(ngModel)]="form.employeeName" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Email *</span>
+            <input class="field__control" type="email" [(ngModel)]="form.email" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Type</span>
+            <select class="field__control" [(ngModel)]="form.type">
+              <option value="Annual">Annual</option>
+              <option value="Sick">Sick</option>
+              <option value="Unpaid">Unpaid</option>
+              <option value="Remote">Remote</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Start date *</span>
+            <input class="field__control" type="date" [(ngModel)]="form.startDate" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">End date *</span>
+            <input class="field__control" type="date" [(ngModel)]="form.endDate" />
+          </label>
+
+          <div class="summary">
+            <div class="summary__label">Days</div>
+            <div class="summary__value">{{ previewDays }}</div>
+            <div class="summary__hint muted">Calcul inclusif simple</div>
+          </div>
+
+          <label class="field field--full">
+            <span class="field__label">Note (optionnel)</span>
+            <textarea
+              class="field__control textarea"
+              rows="3"
+              [(ngModel)]="form.note"
+            ></textarea>
+          </label>
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn btn--ghost" type="button" (click)="closeModal()">
+            Cancel
+          </button>
+          <button class="btn btn--primary" type="button" (click)="createRequest()">
+            Create request
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- Toast -->
+  <div
+    class="toast"
+    *ngIf="showToast"
+    [class.toast--success]="toastType === 'success'"
+    [class.toast--error]="toastType === 'error'"
+  >
+    <div class="toast__content">
+      <span class="toast__icon">
+        {{ toastType === 'success' ? '✓' : '⚠' }}
+      </span>
+      <span class="toast__message">{{ toastMessage }}</span>
+    </div>
+
+    <button class="toast__close" type="button" (click)="dismissToast()">
+      ✕
+    </button>
+  </div>
+</section>

@@ -1,0 +1,246 @@
+<section class="trainings">
+  <div class="trainings__header">
+    <div>
+      <h1>Trainings</h1>
+      <p>Catalogue et suivi des formations (MVP).</p>
+    </div>
+
+    <button class="btn btn--primary" type="button" (click)="openModal()">
+      + New training
+    </button>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar__left">
+      <div class="search">
+        <span class="search__icon">⌕</span>
+        <input
+          class="search__input"
+          type="text"
+          placeholder="Rechercher : titre, catégorie, provider..."
+          [(ngModel)]="search"
+        />
+      </div>
+
+      <div class="filters">
+        <label class="field">
+          <span class="field__label">Level</span>
+          <select class="field__control" [(ngModel)]="levelFilter">
+            <option value="All">Tous</option>
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Status</span>
+          <select class="field__control" [(ngModel)]="statusFilter">
+            <option value="All">Tous</option>
+            <option value="Planned">Planned</option>
+            <option value="Ongoing">Ongoing</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </label>
+
+        <button class="btn btn--ghost" type="button" (click)="resetFilters()">
+          Reset
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar__right">
+      <span class="count">{{ totalItems }} résultat(s)</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Training</th>
+          <th>Category</th>
+          <th>Provider</th>
+          <th>Hours</th>
+          <th>Level</th>
+          <th>Status</th>
+          <th>Start date</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let training of paginatedTrainings">
+          <td class="mono">{{ training.id }}</td>
+
+          <td>
+            <div class="title-block">
+              <div class="title-block__name">{{ training.title }}</div>
+              <div class="title-block__sub muted">{{ training.category }}</div>
+            </div>
+          </td>
+
+          <td>
+            <span class="chip">{{ training.category }}</span>
+          </td>
+
+          <td class="muted">{{ training.provider }}</td>
+          <td class="mono">{{ training.durationHours }}h</td>
+          <td>{{ training.level }}</td>
+
+          <td>
+            <span
+              class="badge"
+              [class.badge--planned]="training.status === 'Planned'"
+              [class.badge--ongoing]="training.status === 'Ongoing'"
+              [class.badge--completed]="training.status === 'Completed'"
+            >
+              {{ training.status }}
+            </span>
+          </td>
+
+          <td class="muted">{{ training.startDate }}</td>
+        </tr>
+
+        <tr *ngIf="totalItems === 0">
+          <td colspan="8" class="empty">
+            <div class="empty__box">
+              <div class="empty__title">Aucun résultat</div>
+              <div class="muted">Essaie de modifier les filtres ou la recherche.</div>
+              <button class="btn btn--primary" type="button" (click)="resetFilters()">
+                Reset
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="table-footer" *ngIf="totalItems > 0">
+      <div class="table-footer__left">
+        <span class="muted">Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}</span>
+      </div>
+
+      <div class="table-footer__right">
+        <label class="page-size">
+          <span class="muted">Rows</span>
+          <select
+            class="page-size__select"
+            [(ngModel)]="pageSize"
+            (ngModelChange)="onPageSizeChange()"
+          >
+            <option *ngFor="let s of pageSizeOptions" [value]="s">{{ s }}</option>
+          </select>
+        </label>
+
+        <div class="pager">
+          <button class="btn btn--ghost" type="button" (click)="prevPage()" [disabled]="currentPage === 1">
+            ←
+          </button>
+
+          <button class="page-btn page-btn--active" type="button">
+            {{ currentPage }}
+          </button>
+
+          <button class="btn btn--ghost" type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">
+            →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal__content" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <h2>New training</h2>
+          <p class="muted">Créer une nouvelle formation (frontend mock).</p>
+        </div>
+        <button class="icon-btn" type="button" (click)="closeModal()">✕</button>
+      </div>
+
+      <div class="form">
+        <div class="form__grid">
+          <label class="field">
+            <span class="field__label">Title *</span>
+            <input class="field__control" [(ngModel)]="form.title" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Category *</span>
+            <input class="field__control" [(ngModel)]="form.category" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Provider *</span>
+            <input class="field__control" [(ngModel)]="form.provider" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Hours *</span>
+            <input
+           class="field__control"
+           type="number"
+           min="1"
+           step="1"
+           [(ngModel)]="form.durationHours"
+         />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Level</span>
+            <select class="field__control" [(ngModel)]="form.level">
+              <option value="Beginner">Beginner</option>
+              <option value="Intermediate">Intermediate</option>
+              <option value="Advanced">Advanced</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field__label">Status</span>
+            <select class="field__control" [(ngModel)]="form.status">
+              <option value="Planned">Planned</option>
+              <option value="Ongoing">Ongoing</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </label>
+
+          <label class="field field--full">
+            <span class="field__label">Start date *</span>
+            <input class="field__control" type="date" [(ngModel)]="form.startDate" />
+          </label>
+        </div>
+
+        <div class="modal__actions">
+          <button class="btn btn--ghost" type="button" (click)="closeModal()">
+            Cancel
+          </button>
+          <button class="btn btn--primary" type="button" (click)="createTraining()">
+            Create training
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div
+    class="toast"
+    *ngIf="showToast"
+    [class.toast--success]="toastType === 'success'"
+    [class.toast--error]="toastType === 'error'"
+  >
+    <div class="toast__content">
+      <span class="toast__icon">
+        {{ toastType === 'success' ? '✓' : '⚠' }}
+      </span>
+      <span class="toast__message">{{ toastMessage }}</span>
+    </div>
+
+    <button class="toast__close" type="button" (click)="dismissToast()">
+      ✕
+    </button>
+  </div>
+</section>
