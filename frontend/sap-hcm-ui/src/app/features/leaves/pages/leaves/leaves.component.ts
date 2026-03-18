@@ -50,12 +50,34 @@ export class LeavesComponent {
     public authService: AuthService
   ) {
     this.leaves = this.leaveService.getLeaves();
+
+    // préremplir automatiquement si employé
+    const user = this.authService.getUser();
+    if (user && this.authService.isEmployee()) {
+      this.form.employeeName = user.name;
+      this.form.email = user.email;
+    }
+  }
+
+  get canManageLeaves(): boolean {
+    return this.authService.isManager() || this.authService.isHrAdmin();
+  }
+
+  get visibleLeaves(): LeaveRequest[] {
+    if (this.canManageLeaves) {
+      return this.leaves;
+    }
+
+    const userEmail = this.authService.getUser()?.email;
+    if (!userEmail) return [];
+
+    return this.leaves.filter((leave) => leave.email === userEmail);
   }
 
   get filteredLeaves(): LeaveRequest[] {
     const q = this.search.trim().toLowerCase();
 
-    return this.leaves.filter((leave) => {
+    return this.visibleLeaves.filter((leave) => {
       const matchSearch =
         !q ||
         leave.employeeName.toLowerCase().includes(q) ||
@@ -96,10 +118,6 @@ export class LeavesComponent {
 
   get previewDays(): number {
     return this.calculateDays(this.form.startDate, this.form.endDate);
-  }
-
-  get canManageLeaves(): boolean {
-    return this.authService.isManager() || this.authService.isHrAdmin();
   }
 
   resetFilters(): void {
@@ -146,6 +164,13 @@ export class LeavesComponent {
   }
 
   openModal(): void {
+    const user = this.authService.getUser();
+
+    if (user && this.authService.isEmployee()) {
+      this.form.employeeName = user.name;
+      this.form.email = user.email;
+    }
+
     this.showModal = true;
   }
 
@@ -195,6 +220,13 @@ export class LeavesComponent {
 
     this.currentPage = 1;
     this.resetForm();
+
+    const user = this.authService.getUser();
+    if (user && this.authService.isEmployee()) {
+      this.form.employeeName = user.name;
+      this.form.email = user.email;
+    }
+
     this.closeModal();
     this.showToastMessage('Leave request created successfully.', 'success');
   }
