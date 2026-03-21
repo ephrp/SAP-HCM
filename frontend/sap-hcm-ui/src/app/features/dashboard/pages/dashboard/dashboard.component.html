@@ -8,32 +8,32 @@
     <div class="dash__actions">
       <button class="btn btn--ghost" type="button">Exporter</button>
       <button class="btn btn--ghost" type="button" (click)="openVideo()">Voir la démo</button>
-      <button class="btn" type="button">Actualiser</button>
+      <button class="btn" type="button" (click)="refreshDashboard()">Actualiser</button>
     </div>
   </div>
 
   <div class="kpis">
     <article class="card">
       <p class="card__label">Effectif total</p>
-      <p class="card__value kpi-pop">{{ animated.totalEmployees }}</p>
+      <p class="card__value kpi-pop">{{ stats.totalEmployees }}</p>
       <p class="card__hint">Employés actifs</p>
     </article>
 
     <article class="card">
       <p class="card__label">Congés en attente</p>
-      <p class="card__value kpi-pop">{{ animated.pendingLeaves }}</p>
+      <p class="card__value kpi-pop">{{ stats.pendingLeaves }}</p>
       <p class="card__hint">Demandes à valider</p>
     </article>
 
     <article class="card">
       <p class="card__label">Heures de formation</p>
-      <p class="card__value kpi-pop">{{ animated.trainingHours }}</p>
+      <p class="card__value kpi-pop">{{ stats.trainingHours }}</p>
       <p class="card__hint">Total (période)</p>
     </article>
 
     <article class="card">
       <p class="card__label">Départements</p>
-      <p class="card__value kpi-pop">{{ animated.departments }}</p>
+      <p class="card__value kpi-pop">{{ stats.departments }}</p>
       <p class="card__hint">Répartition interne</p>
     </article>
   </div>
@@ -52,60 +52,49 @@
   </div>
 
   <div class="chart__wrap" aria-label="Employee chart">
-    <svg viewBox="0 0 720 220" class="chart__svg" role="img">
-      <!-- Axes -->
-      <line x1="40" y1="180" x2="690" y2="180" class="axis"></line>
-      <line x1="40" y1="30" x2="40" y2="180" class="axis"></line>
+  <svg viewBox="0 0 720 220" class="chart__svg" role="img">
+    <!-- Axes -->
+    <line x1="40" y1="180" x2="690" y2="180" class="axis"></line>
+    <line x1="40" y1="30" x2="40" y2="180" class="axis"></line>
 
-      <!-- Grid lines -->
-      <line x1="40" y1="140" x2="690" y2="140" class="grid"></line>
-      <line x1="40" y1="100" x2="690" y2="100" class="grid"></line>
-      <line x1="40" y1="60" x2="690" y2="60" class="grid"></line>
+    <!-- Grid lines -->
+    <line x1="40" y1="140" x2="690" y2="140" class="grid"></line>
+    <line x1="40" y1="100" x2="690" y2="100" class="grid"></line>
+    <line x1="40" y1="60" x2="690" y2="60" class="grid"></line>
 
-      <!-- Line path (fake data: 18, 19, 20, 21, 23, 24) -->
-      <path
-        class="line"
-        d="M 70 150
-           L 170 145
-           L 270 135
-           L 370 125
-           L 470 95
-           L 570 85"
-      ></path>
+    <!-- Dynamic line -->
+    <path
+      class="line"
+      [attr.d]="'M ' + getChartPoints()"
+    ></path>
 
-      <!-- Fill under the line -->
-      <path
-        class="fill"
-        d="M 70 150
-           L 170 145
-           L 270 135
-           L 370 125
-           L 470 95
-           L 570 85
-           L 570 180
-           L 70 180 Z"
-      ></path>
+    <!-- Dynamic fill -->
+    <path
+      class="fill"
+      [attr.d]="getFillPath()"
+    ></path>
 
-      <!-- Points -->
-      <circle cx="70" cy="150" r="5" class="dot"></circle>
-      <circle cx="170" cy="145" r="5" class="dot"></circle>
-      <circle cx="270" cy="135" r="5" class="dot"></circle>
-      <circle cx="370" cy="125" r="5" class="dot"></circle>
-      <circle cx="470" cy="95" r="5" class="dot"></circle>
-      <circle cx="570" cy="85" r="5" class="dot"></circle>
+    <!-- Dynamic dots -->
+    <circle
+      *ngFor="let dot of getDots()"
+      [attr.cx]="dot.x"
+      [attr.cy]="dot.y"
+      r="5"
+      class="dot"
+    ></circle>
 
-      <!-- Labels -->
-      <text x="62" y="205" class="label">Oct</text>
-      <text x="162" y="205" class="label">Nov</text>
-      <text x="262" y="205" class="label">Déc</text>
-      <text x="362" y="205" class="label">Jan</text>
-      <text x="462" y="205" class="label">Fév</text>
-      <text x="562" y="205" class="label">Mar</text>
+    <!-- Month labels -->
+    <text x="62" y="205" class="label">Oct</text>
+    <text x="162" y="205" class="label">Nov</text>
+    <text x="262" y="205" class="label">Déc</text>
+    <text x="362" y="205" class="label">Jan</text>
+    <text x="462" y="205" class="label">Fév</text>
+    <text x="562" y="205" class="label">Mar</text>
 
-      <!-- Value hint (top) -->
-      <text x="600" y="50" class="hint">24 employés</text>
-    </svg>
-  </div>
+    <!-- Value hint -->
+    <text x="600" y="50" class="hint">{{ stats.totalEmployees }} employés</text>
+  </svg>
+</div>
 </article>
 
 

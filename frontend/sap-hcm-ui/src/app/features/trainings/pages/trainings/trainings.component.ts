@@ -1,21 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import {
+  Training,
+  TrainingLevel,
+  TrainingService,
+  TrainingStatus,
+} from '../../../../core/services/training.service';
 
-type TrainingStatus = 'Planned' | 'Ongoing' | 'Completed';
-type TrainingLevel = 'Beginner' | 'Intermediate' | 'Advanced';
 type ToastType = 'success' | 'error';
-
-interface Training {
-  id: number;
-  title: string;
-  category: string;
-  provider: string;
-  durationHours: number;
-  level: TrainingLevel;
-  status: TrainingStatus;
-  startDate: string;
-}
 
 @Component({
   selector: 'app-trainings',
@@ -59,38 +52,11 @@ export class TrainingsComponent {
   toastType: ToastType = 'success';
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  trainings: Training[] = [
-    {
-      id: 201,
-      title: 'Angular Advanced',
-      category: 'Frontend',
-      provider: 'OpenClassrooms',
-      durationHours: 18,
-      level: 'Advanced',
-      status: 'Ongoing',
-      startDate: '2026-02-05',
-    },
-    {
-      id: 202,
-      title: 'Leadership Essentials',
-      category: 'Management',
-      provider: 'Coursera',
-      durationHours: 10,
-      level: 'Beginner',
-      status: 'Planned',
-      startDate: '2026-03-01',
-    },
-    {
-      id: 203,
-      title: 'HR Analytics Basics',
-      category: 'HR',
-      provider: 'Udemy',
-      durationHours: 12,
-      level: 'Intermediate',
-      status: 'Completed',
-      startDate: '2026-01-10',
-    },
-  ];
+  trainings: Training[] = [];
+
+  constructor(private trainingService: TrainingService) {
+    this.trainings = this.trainingService.getTrainings();
+  }
 
   get filteredTrainings(): Training[] {
     const q = this.search.trim().toLowerCase();
@@ -175,7 +141,10 @@ export class TrainingsComponent {
       this.form.durationHours === null ||
       this.form.durationHours <= 0
     ) {
-      this.showToastMessage('Veuillez remplir correctement les champs obligatoires.', 'error');
+      this.showToastMessage(
+        'Veuillez remplir correctement les champs obligatoires.',
+        'error'
+      );
       return;
     }
 
@@ -195,7 +164,9 @@ export class TrainingsComponent {
       startDate: this.form.startDate,
     };
 
-    this.trainings = [newTraining, ...this.trainings];
+    this.trainingService.addTraining(newTraining);
+    this.trainings = this.trainingService.getTrainings();
+
     this.currentPage = 1;
     this.resetForm();
     this.closeModal();

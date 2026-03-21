@@ -24,6 +24,7 @@
       </a>
 
       <a
+        *ngIf="authService.isEmployee()"
         routerLink="/leaves"
         routerLinkActive="active"
       >
@@ -31,12 +32,12 @@
       </a>
 
       <a
-  *ngIf="authService.isManager() || authService.isHrAdmin()"
-  routerLink="/approvals"
-  routerLinkActive="active"
->
-  Approvals
-</a>
+        *ngIf="authService.isManager() || authService.isHrAdmin()"
+        routerLink="/approvals"
+        routerLinkActive="active"
+      >
+        Approvals
+      </a>
 
       <a
         routerLink="/trainings"

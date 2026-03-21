@@ -1,17 +1,10 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-
-interface Employee {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  department: string;
-  position: string;
-  status: 'Active' | 'Inactive';
-  photoUrl?: string;
-}
+import {
+  Employee,
+  EmployeeService,
+} from '../../../../core/services/employee.service';
 
 type StatusFilter = 'All' | 'Active' | 'Inactive';
 type ModalMode = 'create' | 'edit';
@@ -26,38 +19,7 @@ type SortDirection = 'asc' | 'desc';
   styleUrls: ['./employees.component.scss'],
 })
 export class Employees {
-  employees: Employee[] = [
-    {
-      id: 1,
-      firstName: 'Jean',
-      lastName: 'Dupont',
-      email: 'jean.dupont@company.com',
-      department: 'IT',
-      position: 'Software Engineer',
-      status: 'Active',
-      photoUrl: 'https://i.pravatar.cc/150?img=12',
-    },
-    {
-      id: 2,
-      firstName: 'Marie',
-      lastName: 'Roy',
-      email: 'marie.roy@company.com',
-      department: 'HR',
-      position: 'HR Manager',
-      status: 'Active',
-      photoUrl: 'https://i.pravatar.cc/150?img=32',
-    },
-    {
-      id: 3,
-      firstName: 'Paul',
-      lastName: 'Martin',
-      email: 'paul.martin@company.com',
-      department: 'Finance',
-      position: 'Accountant',
-      status: 'Inactive',
-      photoUrl: 'https://i.pravatar.cc/150?img=56',
-    },
-  ];
+  employees: Employee[] = [];
 
   // Filters
   search = '';
@@ -92,9 +54,13 @@ export class Employees {
   sortColumn: SortColumn = 'id';
   sortDirection: SortDirection = 'asc';
 
-  // ✅ Multi-select
+  // Multi-select
   selectedIds = new Set<number>();
   showBulkDelete = false;
+
+  constructor(private employeeService: EmployeeService) {
+    this.employees = this.employeeService.getEmployees();
+  }
 
   // Helpers
   getAvatar(employee: Employee): string {
@@ -137,6 +103,7 @@ export class Employees {
 
   get filteredEmployees(): Employee[] {
     const q = this.search.trim().toLowerCase();
+
     return this.employees.filter((e) => {
       const matchesSearch =
         !q ||
@@ -243,7 +210,7 @@ export class Employees {
     return Array.from({ length: end - finalStart + 1 }, (_, i) => finalStart + i);
   }
 
-  // ✅ Multi-select logic
+  // Multi-select logic
   get selectedCount(): number {
     return this.selectedIds.size;
   }
@@ -253,8 +220,11 @@ export class Employees {
   }
 
   toggleSelect(id: number): void {
-    if (this.selectedIds.has(id)) this.selectedIds.delete(id);
-    else this.selectedIds.add(id);
+    if (this.selectedIds.has(id)) {
+      this.selectedIds.delete(id);
+    } else {
+      this.selectedIds.add(id);
+    }
   }
 
   get isAllPageSelected(): boolean {
@@ -276,17 +246,27 @@ export class Employees {
 
   bulkSetActive(): void {
     if (this.selectedCount === 0) return;
-    this.employees = this.employees.map((e) =>
-      this.selectedIds.has(e.id) ? { ...e, status: 'Active' } : e
-    );
+
+    this.employees
+      .filter((e) => this.selectedIds.has(e.id))
+      .forEach((e) => {
+        this.employeeService.updateEmployee({ ...e, status: 'Active' });
+      });
+
+    this.employees = this.employeeService.getEmployees();
     this.clearSelection();
   }
 
   bulkSetInactive(): void {
     if (this.selectedCount === 0) return;
-    this.employees = this.employees.map((e) =>
-      this.selectedIds.has(e.id) ? { ...e, status: 'Inactive' } : e
-    );
+
+    this.employees
+      .filter((e) => this.selectedIds.has(e.id))
+      .forEach((e) => {
+        this.employeeService.updateEmployee({ ...e, status: 'Inactive' });
+      });
+
+    this.employees = this.employeeService.getEmployees();
     this.clearSelection();
   }
 
@@ -300,13 +280,17 @@ export class Employees {
   }
 
   confirmBulkDelete(): void {
-    this.employees = this.employees.filter((e) => !this.selectedIds.has(e.id));
+    this.employees
+      .filter((e) => this.selectedIds.has(e.id))
+      .forEach((e) => this.employeeService.deleteEmployee(e.id));
+
+    this.employees = this.employeeService.getEmployees();
     this.clearSelection();
     this.currentPage = 1;
     this.closeBulkDelete();
   }
 
-  // ------- Modal create/edit -------
+  // Modal create/edit
   openCreate(): void {
     this.modalMode = 'create';
     this.editingId = null;
@@ -342,7 +326,11 @@ export class Employees {
   }
 
   saveEmployee(): void {
-    if (!this.form.firstName.trim() || !this.form.lastName.trim() || !this.form.email.trim()) {
+    if (
+      !this.form.firstName.trim() ||
+      !this.form.lastName.trim() ||
+      !this.form.email.trim()
+    ) {
       alert('First name, Last name et Email sont obligatoires.');
       return;
     }
@@ -357,12 +345,23 @@ export class Employees {
           ? Math.max(...this.employees.map((e) => e.id)) + 1
           : 1;
 
-      const newEmp: Employee = { id: nextId, ...this.form, photoUrl: finalPhoto };
-      this.employees = [newEmp, ...this.employees];
+      const newEmp: Employee = {
+        id: nextId,
+        ...this.form,
+        photoUrl: finalPhoto,
+      };
+
+      this.employeeService.addEmployee(newEmp);
+      this.employees = this.employeeService.getEmployees();
     } else if (this.modalMode === 'edit' && this.editingId != null) {
-      this.employees = this.employees.map((e) =>
-        e.id === this.editingId ? { ...e, ...this.form, photoUrl: finalPhoto } : e
-      );
+      const updatedEmployee: Employee = {
+        id: this.editingId,
+        ...this.form,
+        photoUrl: finalPhoto,
+      };
+
+      this.employeeService.updateEmployee(updatedEmployee);
+      this.employees = this.employeeService.getEmployees();
     }
 
     this.currentPage = 1;
@@ -381,7 +380,7 @@ export class Employees {
     reader.readAsDataURL(file);
   }
 
-  // ------- Single delete -------
+  // Single delete
   openDelete(employee: Employee): void {
     this.deleteTarget = employee;
     this.showDelete = true;
@@ -394,7 +393,10 @@ export class Employees {
 
   confirmDelete(): void {
     if (!this.deleteTarget) return;
-    this.employees = this.employees.filter((e) => e.id !== this.deleteTarget!.id);
+
+    this.employeeService.deleteEmployee(this.deleteTarget.id);
+    this.employees = this.employeeService.getEmployees();
+
     this.currentPage = 1;
     this.closeDelete();
   }
