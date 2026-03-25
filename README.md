@@ -1,11 +1,12 @@
-# PeopleFlow  — Mini HCM/HXM pour PME (inspiré SAP)
+# PeopleFlow — Mini HCM/HXM pour PME (inspiré SAP)
 
 PeopleFlow est une application web de gestion des ressources humaines (HCM/HXM) destinée aux petites et moyennes entreprises.  
 Le projet s’inspire des principes fonctionnels de SAP HCM / SuccessFactors (rôles, processus RH, workflows) tout en restant volontairement simple, accessible et rapide à utiliser.
 
 L’objectif est double :
-1) construire un projet full-stack réaliste et professionnalisant (portfolio)  
-2) poser une base qui peut devenir un produit monétisable (SaaS ou installation PME)
+
+1. construire un projet full-stack réaliste et professionnalisant (portfolio)
+2. poser une base qui peut devenir un produit monétisable (SaaS ou installation PME)
 
 ---
 
@@ -22,28 +23,33 @@ PeopleFlow vise donc à offrir une alternative “light” : les fonctionnalité
 ## Fonctionnalités (MVP)
 
 ### 1) Authentification & rôles (inspiration SAP : autorisations)
+
 - Connexion sécurisée
 - Gestion des rôles : `EMPLOYEE`, `MANAGER`, `HR_ADMIN`
 - Accès et actions limités selon le rôle
 
 ### 2) Gestion des employés (Personnel Administration)
+
 - Création et gestion des fiches employés
 - Informations de base : identité, contact, département, poste, statut
 - Désactivation d’un employé (soft delete) pour conserver l’historique
 
 ### 3) Congés & absences (workflow RH)
+
 - Un employé soumet une demande de congé
 - La demande passe par un workflow : `PENDING` → `APPROVED` ou `REJECTED`
 - Les managers / RH peuvent valider ou refuser
 - Historique des demandes et traçabilité des décisions
 
 ### 4) Formations & compétences (LMS léger)
+
 - Catalogue de formations créé par RH
 - Inscription des employés
 - Suivi des formations (inscrit, complété…)
 - Calcul des heures de formation par employé / équipe
 
 ### 5) Tableau de bord RH (analytics)
+
 - Indicateurs clés : effectif, congés en attente, formations, répartition par département
 - Objectif : aider à la décision et donner de la visibilité
 
@@ -92,6 +98,7 @@ PeopleFlow vise donc à offrir une alternative “light” : les fonctionnalité
 ## Monétisation (pistes)
 
 PeopleFlow est conçu pour pouvoir évoluer vers :
+
 - **SaaS PME** (abonnement mensuel selon nombre d’employés)
 - **Installation + maintenance** (facturation projet + support)
 - **Version personnalisée** (ajouts sur mesure : exports, règles RH spécifiques, intégrations)
