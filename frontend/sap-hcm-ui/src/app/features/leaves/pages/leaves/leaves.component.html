@@ -10,6 +10,10 @@
     </button>
   </div>
 
+  <p *ngIf="errorMessage" class="error-banner">
+    {{ errorMessage }}
+  </p>
+
   <div class="toolbar">
     <div class="toolbar__left">
       <div class="search">
@@ -64,7 +68,7 @@
           <th>Type</th>
           <th>Période</th>
           <th>Jours</th>
-          <th>Créé le</th>
+          <th>Département</th>
           <th>Status</th>
           <th class="th-actions">Actions</th>
         </tr>
@@ -76,8 +80,10 @@
 
           <td>
             <div class="who">
-              <div class="who__name">{{ leave.employeeName }}</div>
-              <div class="who__sub muted">{{ leave.email }}</div>
+              <div class="who__name">
+                {{ leave.employee.firstName }} {{ leave.employee.lastName }}
+              </div>
+              <div class="who__sub muted">{{ leave.employee.email }}</div>
             </div>
           </td>
 
@@ -92,7 +98,8 @@
           </td>
 
           <td class="mono">{{ leave.days }}</td>
-          <td class="muted">{{ leave.createdAt }}</td>
+
+          <td class="muted">{{ leave.employee.department?.name || '-' }}</td>
 
           <td>
             <span
@@ -148,7 +155,9 @@
 
     <div class="table-footer" *ngIf="totalItems > 0">
       <div class="table-footer__left">
-        <span class="muted">Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}</span>
+        <span class="muted">
+          Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}
+        </span>
       </div>
 
       <div class="table-footer__right">
@@ -190,13 +199,14 @@
     </div>
   </div>
 
-  <!-- Modal New Request -->
   <div class="modal" *ngIf="showModal" (click)="closeModal()">
     <div class="modal__content" (click)="$event.stopPropagation()">
       <div class="modal__header">
         <div>
           <h2>New leave request</h2>
-          <p class="muted">Le statut sera automatiquement défini à <strong>Pending</strong>.</p>
+          <p class="muted">
+            Le statut sera automatiquement défini à <strong>Pending</strong>.
+          </p>
         </div>
         <button class="icon-btn" type="button" (click)="closeModal()">✕</button>
       </div>
@@ -211,6 +221,11 @@
           <label class="field">
             <span class="field__label">Email *</span>
             <input class="field__control" type="email" [(ngModel)]="form.email" />
+          </label>
+
+          <label class="field">
+            <span class="field__label">Department</span>
+            <input class="field__control" [(ngModel)]="form.departmentName" />
           </label>
 
           <label class="field">
@@ -261,7 +276,6 @@
     </div>
   </div>
 
-  <!-- Toast -->
   <div
     class="toast"
     *ngIf="showToast"

@@ -79,12 +79,12 @@
 
           <td>
             <div class="who">
-              <div class="who__name">{{ item.employeeName }}</div>
-              <div class="who__sub muted">{{ item.email }}</div>
+              <div class="who__name">{{ item.employee.firstName }} {{ item.employee.lastName }}</div>
+              <div class="who__sub muted">{{ item.employee.email }}</div>
             </div>
           </td>
 
-          <td>{{ item.department }}</td>
+          <td>{{ item.employee.department?.name || '-' }}</td>
 
           <td>
             <span class="chip">{{ item.type }}</span>

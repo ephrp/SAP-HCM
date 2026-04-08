@@ -1,9 +1,20 @@
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { forkJoin } from 'rxjs';
+
 import { AuthService } from '../../../../core/services/auth.service';
-import { EmployeeService } from '../../../../core/services/employee.service';
-import { LeaveService } from '../../../../core/services/leave.service';
-import { TrainingService } from '../../../../core/services/training.service';
+import {
+  Employee,
+  EmployeeService,
+} from '../../../../core/services/employee.service';
+import {
+  LeaveRequest,
+  LeaveService,
+} from '../../../../core/services/leave.service';
+import {
+  Training,
+  TrainingService,
+} from '../../../../core/services/training.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -33,8 +44,9 @@ export class DashboardComponent implements OnInit {
   };
 
   showVideo = false;
+  isLoading = false;
+  errorMessage = '';
 
-  // Données du graphe
   employeeTrend: number[] = [0, 0, 0, 0, 0, 0];
   readonly chartMonths = ['Oct', 'Nov', 'Déc', 'Jan', 'Fév', 'Mar'];
 
@@ -43,49 +55,83 @@ export class DashboardComponent implements OnInit {
   }
 
   refreshDashboard(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
     const user = this.authService.getUser();
+    const trainings: Training[] = this.trainingService.getTrainings();
 
-    const employees = this.employeeService.getEmployees();
-    const leaves = this.leaveService.getLeaves();
-    const trainings = this.trainingService.getTrainings();
+    forkJoin({
+      employees: this.employeeService.getEmployees(),
+      leaves: this.leaveService.getLeaves(),
+    }).subscribe({
+      next: ({
+        employees,
+        leaves,
+      }: {
+        employees: Employee[];
+        leaves: LeaveRequest[];
+      }) => {
+        const activeEmployees = employees.filter(
+          (employee: Employee) => employee.status === 'Active'
+        );
 
-    const activeEmployees = employees.filter((e) => e.status === 'Active');
+        const visibleLeaves =
+          this.authService.isEmployee() && user?.email
+            ? leaves.filter(
+                (leave: LeaveRequest) => leave.employee.email === user.email
+              )
+            : leaves;
 
-    const visibleLeaves =
-      this.authService.isEmployee() && user?.email
-        ? leaves.filter((leave) => leave.email === user.email)
-        : leaves;
+        const pendingLeaves = visibleLeaves.filter(
+          (leave: LeaveRequest) => leave.status === 'Pending'
+        ).length;
 
-    const pendingLeaves = visibleLeaves.filter(
-      (leave) => leave.status === 'Pending'
-    ).length;
+        const totalEmployees = this.authService.isEmployee()
+          ? 1
+          : activeEmployees.length;
 
-    const totalEmployees = this.authService.isEmployee()
-      ? 1
-      : activeEmployees.length;
+        const departments = this.authService.isEmployee()
+          ? 1
+          : new Set(
+              activeEmployees
+                .map((employee: Employee) => employee.department?.name)
+                .filter((name): name is string => !!name)
+            ).size;
 
-    const departments = this.authService.isEmployee()
-      ? 1
-      : new Set(activeEmployees.map((employee) => employee.department)).size;
+        const trainingHours = trainings.reduce(
+          (sum: number, training: Training) => sum + training.durationHours,
+          0
+        );
 
-    const trainingHours = trainings.reduce(
-      (sum, training) => sum + training.durationHours,
-      0
-    );
+        this.stats = {
+          totalEmployees,
+          pendingLeaves,
+          trainingHours,
+          departments,
+        };
 
-    this.stats = {
-      totalEmployees,
-      pendingLeaves,
-      trainingHours,
-      departments,
-    };
+        this.buildEmployeeTrend(totalEmployees);
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Dashboard load error:', err);
 
-    this.buildEmployeeTrend(totalEmployees);
+        this.stats = {
+          totalEmployees: 0,
+          pendingLeaves: 0,
+          trainingHours: 0,
+          departments: 0,
+        };
+
+        this.buildEmployeeTrend(0);
+        this.errorMessage = 'Impossible de charger les données du dashboard.';
+        this.isLoading = false;
+      },
+    });
   }
 
   private buildEmployeeTrend(totalEmployees: number): void {
-    // Simulation cohérente avec la valeur réelle actuelle
-    // Le dernier point = totalEmployees
     this.employeeTrend = [
       Math.max(0, totalEmployees - 10),
       Math.max(0, totalEmployees - 8),

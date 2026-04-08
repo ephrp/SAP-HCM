@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   Employee,
   EmployeeService,
+  CreateEmployeePayload,
+  UpdateEmployeePayload,
 } from '../../../../core/services/employee.service';
 
 type StatusFilter = 'All' | 'Active' | 'Inactive';
@@ -18,51 +20,64 @@ type SortDirection = 'asc' | 'desc';
   templateUrl: './employees.component.html',
   styleUrls: ['./employees.component.scss'],
 })
-export class Employees {
+export class Employees implements OnInit {
   employees: Employee[] = [];
+  isLoading = false;
+  errorMessage = '';
 
-  // Filters
   search = '';
   departmentFilter = 'All';
   statusFilter: StatusFilter = 'All';
 
-  // Modal create/edit
   showModal = false;
   modalMode: ModalMode = 'create';
   editingId: number | null = null;
 
-  form: Omit<Employee, 'id'> = {
+  form = {
     firstName: '',
     lastName: '',
     email: '',
     department: '',
     position: '',
-    status: 'Active',
+    status: 'Active' as 'Active' | 'Inactive',
     photoUrl: '',
   };
 
-  // Delete confirm (single)
   showDelete = false;
   deleteTarget: Employee | null = null;
 
-  // Pagination
   currentPage = 1;
   pageSize = 5;
   pageSizeOptions = [5, 10, 20];
 
-  // Sorting
   sortColumn: SortColumn = 'id';
   sortDirection: SortDirection = 'asc';
 
-  // Multi-select
   selectedIds = new Set<number>();
   showBulkDelete = false;
 
-  constructor(private employeeService: EmployeeService) {
-    this.employees = this.employeeService.getEmployees();
+  constructor(private employeeService: EmployeeService) {}
+
+  ngOnInit(): void {
+    this.fetchEmployees();
   }
 
-  // Helpers
+  fetchEmployees(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.employeeService.getEmployees().subscribe({
+      next: (employees) => {
+        this.employees = employees;
+        this.isLoading = false;
+      },
+      error: () => {
+        this.errorMessage = 'Impossible de charger les employés.';
+        this.isLoading = false;
+      },
+    });
+  }
+
   getAvatar(employee: Employee): string {
     return (
       employee.photoUrl ||
@@ -71,7 +86,14 @@ export class Employees {
   }
 
   get departments(): string[] {
-    const unique = Array.from(new Set(this.employees.map((e) => e.department)));
+    const unique = Array.from(
+      new Set(
+        this.employees
+          .map((e) => e.department?.name)
+          .filter((name): name is string => !!name)
+      )
+    );
+
     return unique.sort((a, b) => a.localeCompare(b));
   }
 
@@ -93,7 +115,7 @@ export class Employees {
       case 'email':
         return this.normalize(e.email);
       case 'department':
-        return this.normalize(e.department);
+        return this.normalize(e.department?.name ?? '');
       case 'position':
         return this.normalize(e.position);
       case 'status':
@@ -105,15 +127,17 @@ export class Employees {
     const q = this.search.trim().toLowerCase();
 
     return this.employees.filter((e) => {
+      const departmentName = e.department?.name ?? '';
+
       const matchesSearch =
         !q ||
         `${e.firstName} ${e.lastName}`.toLowerCase().includes(q) ||
         e.email.toLowerCase().includes(q) ||
-        e.department.toLowerCase().includes(q) ||
+        departmentName.toLowerCase().includes(q) ||
         e.position.toLowerCase().includes(q);
 
       const matchesDept =
-        this.departmentFilter === 'All' || e.department === this.departmentFilter;
+        this.departmentFilter === 'All' || departmentName === this.departmentFilter;
 
       const matchesStatus =
         this.statusFilter === 'All' || e.status === this.statusFilter;
@@ -157,7 +181,6 @@ export class Employees {
     return this.sortedEmployees.slice(this.startIndex, this.endIndex);
   }
 
-  // Sorting UI
   setSort(col: SortColumn): void {
     if (this.sortColumn === col) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
@@ -173,7 +196,6 @@ export class Employees {
     return this.sortDirection === 'asc' ? '↑' : '↓';
   }
 
-  // Pagination
   goToPage(page: number): void {
     this.currentPage = Math.min(this.totalPages, Math.max(1, page));
   }
@@ -210,7 +232,6 @@ export class Employees {
     return Array.from({ length: end - finalStart + 1 }, (_, i) => finalStart + i);
   }
 
-  // Multi-select logic
   get selectedCount(): number {
     return this.selectedIds.size;
   }
@@ -244,30 +265,13 @@ export class Employees {
     this.selectedIds.clear();
   }
 
+  // Pour l’instant, on garde bulk en local à faire plus tard côté backend
   bulkSetActive(): void {
-    if (this.selectedCount === 0) return;
-
-    this.employees
-      .filter((e) => this.selectedIds.has(e.id))
-      .forEach((e) => {
-        this.employeeService.updateEmployee({ ...e, status: 'Active' });
-      });
-
-    this.employees = this.employeeService.getEmployees();
-    this.clearSelection();
+    return;
   }
 
   bulkSetInactive(): void {
-    if (this.selectedCount === 0) return;
-
-    this.employees
-      .filter((e) => this.selectedIds.has(e.id))
-      .forEach((e) => {
-        this.employeeService.updateEmployee({ ...e, status: 'Inactive' });
-      });
-
-    this.employees = this.employeeService.getEmployees();
-    this.clearSelection();
+    return;
   }
 
   openBulkDelete(): void {
@@ -280,17 +284,30 @@ export class Employees {
   }
 
   confirmBulkDelete(): void {
-    this.employees
-      .filter((e) => this.selectedIds.has(e.id))
-      .forEach((e) => this.employeeService.deleteEmployee(e.id));
+    const ids = [...this.selectedIds];
+    if (ids.length === 0) return;
 
-    this.employees = this.employeeService.getEmployees();
-    this.clearSelection();
-    this.currentPage = 1;
-    this.closeBulkDelete();
+    let completed = 0;
+
+    ids.forEach((id) => {
+      this.employeeService.deleteEmployee(id).subscribe({
+        next: () => {
+          completed++;
+
+          if (completed === ids.length) {
+            this.fetchEmployees();
+            this.clearSelection();
+            this.currentPage = 1;
+            this.closeBulkDelete();
+          }
+        },
+        error: () => {
+          this.errorMessage = 'Erreur pendant la suppression multiple.';
+        },
+      });
+    });
   }
 
-  // Modal create/edit
   openCreate(): void {
     this.modalMode = 'create';
     this.editingId = null;
@@ -313,7 +330,7 @@ export class Employees {
       firstName: employee.firstName,
       lastName: employee.lastName,
       email: employee.email,
-      department: employee.department,
+      department: employee.department?.name ?? '',
       position: employee.position,
       status: employee.status,
       photoUrl: employee.photoUrl || '',
@@ -340,32 +357,46 @@ export class Employees {
       `https://i.pravatar.cc/150?u=${encodeURIComponent(this.form.email)}`;
 
     if (this.modalMode === 'create') {
-      const nextId =
-        this.employees.length > 0
-          ? Math.max(...this.employees.map((e) => e.id)) + 1
-          : 1;
-
-      const newEmp: Employee = {
-        id: nextId,
-        ...this.form,
+      const payload: CreateEmployeePayload = {
+        firstName: this.form.firstName.trim(),
+        lastName: this.form.lastName.trim(),
+        email: this.form.email.trim(),
+        position: this.form.position.trim(),
+        departmentName: this.form.department.trim() || undefined,
         photoUrl: finalPhoto,
       };
 
-      this.employeeService.addEmployee(newEmp);
-      this.employees = this.employeeService.getEmployees();
+      this.employeeService.addEmployee(payload).subscribe({
+        next: () => {
+          this.fetchEmployees();
+          this.currentPage = 1;
+          this.closeModal();
+        },
+        error: () => {
+          this.errorMessage = 'Impossible de créer l’employé.';
+        },
+      });
     } else if (this.modalMode === 'edit' && this.editingId != null) {
-      const updatedEmployee: Employee = {
-        id: this.editingId,
-        ...this.form,
+      const payload: UpdateEmployeePayload = {
+        firstName: this.form.firstName.trim(),
+        lastName: this.form.lastName.trim(),
+        email: this.form.email.trim(),
+        position: this.form.position.trim(),
+        departmentName: this.form.department.trim(),
         photoUrl: finalPhoto,
       };
 
-      this.employeeService.updateEmployee(updatedEmployee);
-      this.employees = this.employeeService.getEmployees();
+      this.employeeService.updateEmployee(this.editingId, payload).subscribe({
+        next: () => {
+          this.fetchEmployees();
+          this.currentPage = 1;
+          this.closeModal();
+        },
+        error: () => {
+          this.errorMessage = 'Impossible de modifier l’employé.';
+        },
+      });
     }
-
-    this.currentPage = 1;
-    this.closeModal();
   }
 
   onFileSelected(event: Event): void {
@@ -380,7 +411,6 @@ export class Employees {
     reader.readAsDataURL(file);
   }
 
-  // Single delete
   openDelete(employee: Employee): void {
     this.deleteTarget = employee;
     this.showDelete = true;
@@ -394,10 +424,15 @@ export class Employees {
   confirmDelete(): void {
     if (!this.deleteTarget) return;
 
-    this.employeeService.deleteEmployee(this.deleteTarget.id);
-    this.employees = this.employeeService.getEmployees();
-
-    this.currentPage = 1;
-    this.closeDelete();
+    this.employeeService.deleteEmployee(this.deleteTarget.id).subscribe({
+      next: () => {
+        this.fetchEmployees();
+        this.currentPage = 1;
+        this.closeDelete();
+      },
+      error: () => {
+        this.errorMessage = 'Impossible de supprimer l’employé.';
+      },
+    });
   }
 }

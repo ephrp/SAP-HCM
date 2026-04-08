@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   LeaveRequest,
@@ -17,7 +17,7 @@ type ToastType = 'success' | 'error';
   templateUrl: './approvals.component.html',
   styleUrls: ['./approvals.component.scss'],
 })
-export class ApprovalsComponent {
+export class ApprovalsComponent implements OnInit {
   search = '';
   statusFilter: 'All' | LeaveStatus = 'Pending';
   typeFilter: 'All' | LeaveType = 'All';
@@ -32,20 +32,46 @@ export class ApprovalsComponent {
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   approvals: LeaveRequest[] = [];
+  isLoading = false;
+  errorMessage = '';
 
-  constructor(private leaveService: LeaveService) {
-    this.approvals = this.leaveService.getLeaves();
+  constructor(private leaveService: LeaveService) {}
+
+  ngOnInit(): void {
+    this.loadApprovals();
+  }
+
+  loadApprovals(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.leaveService.getLeaves().subscribe({
+      next: (data) => {
+        this.approvals = data;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Load approvals error:', err);
+        this.errorMessage = 'Impossible de charger les validations.';
+        this.isLoading = false;
+      },
+    });
   }
 
   get filteredApprovals(): LeaveRequest[] {
     const q = this.search.trim().toLowerCase();
 
     return this.approvals.filter((item) => {
+      const fullName =
+        `${item.employee.firstName} ${item.employee.lastName}`.toLowerCase();
+
+      const departmentName = item.employee.department?.name ?? '';
+
       const matchSearch =
         !q ||
-        item.employeeName.toLowerCase().includes(q) ||
-        item.email.toLowerCase().includes(q) ||
-        (item.department ?? '').toLowerCase().includes(q);
+        fullName.includes(q) ||
+        item.employee.email.toLowerCase().includes(q) ||
+        departmentName.toLowerCase().includes(q);
 
       const matchStatus =
         this.statusFilter === 'All' || item.status === this.statusFilter;
@@ -108,15 +134,29 @@ export class ApprovalsComponent {
   }
 
   approve(item: LeaveRequest): void {
-    this.leaveService.approveLeave(item.id);
-    this.approvals = this.leaveService.getLeaves();
-    this.showToastMessage('Request approved.', 'success');
+    this.leaveService.approveLeave(item.id).subscribe({
+      next: () => {
+        this.loadApprovals();
+        this.showToastMessage('Request approved.', 'success');
+      },
+      error: (err) => {
+        console.error('Approve request error:', err);
+        this.showToastMessage('Impossible d’approuver la demande.', 'error');
+      },
+    });
   }
 
   reject(item: LeaveRequest): void {
-    this.leaveService.rejectLeave(item.id);
-    this.approvals = this.leaveService.getLeaves();
-    this.showToastMessage('Request rejected.', 'error');
+    this.leaveService.rejectLeave(item.id).subscribe({
+      next: () => {
+        this.loadApprovals();
+        this.showToastMessage('Request rejected.', 'error');
+      },
+      error: (err) => {
+        console.error('Reject request error:', err);
+        this.showToastMessage('Impossible de rejeter la demande.', 'error');
+      },
+    });
   }
 
   dismissToast(): void {

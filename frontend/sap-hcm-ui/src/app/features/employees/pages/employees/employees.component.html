@@ -136,7 +136,7 @@
           </td>
 
           <td class="muted">{{ employee.email }}</td>
-          <td>{{ employee.department }}</td>
+          <td>{{ employee.department?.name || '-' }}</td>
           <td>{{ employee.position }}</td>
 
           <td>

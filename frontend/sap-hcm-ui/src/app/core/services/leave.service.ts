@@ -1,19 +1,45 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 export type LeaveType = 'Annual' | 'Sick' | 'Unpaid' | 'Remote';
 
 export interface LeaveRequest {
   id: number;
-  employeeName: string;
-  email: string;
-  department?: string;
+  employee: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    department: { id: number; name: string } | null;
+  };
   type: LeaveType;
   startDate: string;
   endDate: string;
   days: number;
   status: LeaveStatus;
-  createdAt: string;
+  note?: string;
+}
+
+export interface CreateLeavePayload {
+  employeeName: string;
+  email: string;
+  departmentName?: string;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
+  days: number;
+  status?: LeaveStatus;
+  note?: string;
+}
+
+export interface UpdateLeavePayload {
+  type?: LeaveType;
+  startDate?: string;
+  endDate?: string;
+  days?: number;
+  status?: LeaveStatus;
   note?: string;
 }
 
@@ -21,40 +47,35 @@ export interface LeaveRequest {
   providedIn: 'root',
 })
 export class LeaveService {
+  private readonly apiUrl = 'http://localhost:3000/leaves';
 
-  private leaves: LeaveRequest[] = [
-    {
-      id: 1,
-      employeeName: 'Jean Dupont',
-      email: 'jean.dupont@company.com',
-      department: 'IT',
-      type: 'Annual',
-      startDate: '2026-03-10',
-      endDate: '2026-03-14',
-      days: 5,
-      status: 'Pending',
-      createdAt: '2026-02-10',
-      note: 'Vacances famille',
-    },
-  ];
+  constructor(private http: HttpClient) {}
 
-  getLeaves(): LeaveRequest[] {
-    return this.leaves;
+  getLeaves(): Observable<LeaveRequest[]> {
+    return this.http.get<LeaveRequest[]>(this.apiUrl);
   }
 
-  addLeave(request: LeaveRequest) {
-    this.leaves = [request, ...this.leaves];
+  getLeaveById(id: number): Observable<LeaveRequest> {
+    return this.http.get<LeaveRequest>(`${this.apiUrl}/${id}`);
   }
 
-  approveLeave(id: number) {
-    this.leaves = this.leaves.map((leave) =>
-      leave.id === id ? { ...leave, status: 'Approved' } : leave
-    );
+  createLeave(payload: CreateLeavePayload): Observable<LeaveRequest> {
+    return this.http.post<LeaveRequest>(this.apiUrl, payload);
   }
 
-  rejectLeave(id: number) {
-    this.leaves = this.leaves.map((leave) =>
-      leave.id === id ? { ...leave, status: 'Rejected' } : leave
-    );
+  updateLeave(id: number, payload: UpdateLeavePayload): Observable<LeaveRequest> {
+    return this.http.patch<LeaveRequest>(`${this.apiUrl}/${id}`, payload);
+  }
+
+  deleteLeave(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
+  }
+
+  approveLeave(id: number): Observable<LeaveRequest> {
+    return this.updateLeave(id, { status: 'Approved' });
+  }
+
+  rejectLeave(id: number): Observable<LeaveRequest> {
+    return this.updateLeave(id, { status: 'Rejected' });
   }
 }

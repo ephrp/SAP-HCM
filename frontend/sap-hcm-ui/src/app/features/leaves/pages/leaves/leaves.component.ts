@@ -1,14 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
+  CreateLeavePayload,
   LeaveRequest,
   LeaveService,
   LeaveStatus,
   LeaveType,
 } from '../../../../core/services/leave.service';
 import { AuthService } from '../../../../core/services/auth.service';
-
 
 type ToastType = 'success' | 'error';
 
@@ -19,7 +19,7 @@ type ToastType = 'success' | 'error';
   templateUrl: './leaves.component.html',
   styleUrls: ['./leaves.component.scss'],
 })
-export class LeavesComponent {
+export class LeavesComponent implements OnInit {
   search = '';
   statusFilter: 'All' | LeaveStatus = 'All';
   typeFilter: 'All' | LeaveType = 'All';
@@ -33,6 +33,7 @@ export class LeavesComponent {
   form = {
     employeeName: '',
     email: '',
+    departmentName: '',
     type: 'Annual' as LeaveType,
     startDate: '',
     endDate: '',
@@ -45,19 +46,17 @@ export class LeavesComponent {
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   leaves: LeaveRequest[] = [];
+  isLoading = false;
+  errorMessage = '';
 
   constructor(
     private leaveService: LeaveService,
     public authService: AuthService
-  ) {
-    this.leaves = this.leaveService.getLeaves();
+  ) {}
 
-    // préremplir automatiquement si employé
-    const user = this.authService.getUser();
-    if (user && this.authService.isEmployee()) {
-      this.form.employeeName = user.name;
-      this.form.email = user.email;
-    }
+  ngOnInit(): void {
+    this.prefillEmployeeForm();
+    this.loadLeaves();
   }
 
   get canManageLeaves(): boolean {
@@ -72,17 +71,20 @@ export class LeavesComponent {
     const userEmail = this.authService.getUser()?.email;
     if (!userEmail) return [];
 
-    return this.leaves.filter((leave) => leave.email === userEmail);
+    return this.leaves.filter((leave) => leave.employee.email === userEmail);
   }
 
   get filteredLeaves(): LeaveRequest[] {
     const q = this.search.trim().toLowerCase();
 
     return this.visibleLeaves.filter((leave) => {
+      const fullName =
+        `${leave.employee.firstName} ${leave.employee.lastName}`.toLowerCase();
+
       const matchSearch =
         !q ||
-        leave.employeeName.toLowerCase().includes(q) ||
-        leave.email.toLowerCase().includes(q);
+        fullName.includes(q) ||
+        leave.employee.email.toLowerCase().includes(q);
 
       const matchStatus =
         this.statusFilter === 'All' || leave.status === this.statusFilter;
@@ -121,6 +123,23 @@ export class LeavesComponent {
     return this.calculateDays(this.form.startDate, this.form.endDate);
   }
 
+  loadLeaves(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.leaveService.getLeaves().subscribe({
+      next: (data) => {
+        this.leaves = data;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Load leaves error:', err);
+        this.errorMessage = 'Impossible de charger les congés.';
+        this.isLoading = false;
+      },
+    });
+  }
+
   resetFilters(): void {
     this.search = '';
     this.statusFilter = 'All';
@@ -147,17 +166,31 @@ export class LeavesComponent {
   approve(leave: LeaveRequest): void {
     if (!this.canManageLeaves) return;
 
-    this.leaveService.approveLeave(leave.id);
-    this.leaves = this.leaveService.getLeaves();
-    this.showToastMessage('Leave request approved.', 'success');
+    this.leaveService.approveLeave(leave.id).subscribe({
+      next: () => {
+        this.loadLeaves();
+        this.showToastMessage('Leave request approved.', 'success');
+      },
+      error: (err) => {
+        console.error('Approve leave error:', err);
+        this.showToastMessage('Impossible d’approuver la demande.', 'error');
+      },
+    });
   }
 
   reject(leave: LeaveRequest): void {
     if (!this.canManageLeaves) return;
 
-    this.leaveService.rejectLeave(leave.id);
-    this.leaves = this.leaveService.getLeaves();
-    this.showToastMessage('Leave request rejected.', 'error');
+    this.leaveService.rejectLeave(leave.id).subscribe({
+      next: () => {
+        this.loadLeaves();
+        this.showToastMessage('Leave request rejected.', 'error');
+      },
+      error: (err) => {
+        console.error('Reject leave error:', err);
+        this.showToastMessage('Impossible de rejeter la demande.', 'error');
+      },
+    });
   }
 
   statusLabel(status: LeaveStatus): string {
@@ -165,13 +198,7 @@ export class LeavesComponent {
   }
 
   openModal(): void {
-    const user = this.authService.getUser();
-
-    if (user && this.authService.isEmployee()) {
-      this.form.employeeName = user.name;
-      this.form.email = user.email;
-    }
-
+    this.prefillEmployeeForm();
     this.showModal = true;
   }
 
@@ -197,39 +224,32 @@ export class LeavesComponent {
       return;
     }
 
-    const nextId =
-      this.leaves.length > 0
-        ? Math.max(...this.leaves.map((leave) => leave.id)) + 1
-        : 1;
-
-    const newLeave: LeaveRequest = {
-      id: nextId,
+    const payload: CreateLeavePayload = {
       employeeName: this.form.employeeName.trim(),
       email: this.form.email.trim(),
-      department: 'Unknown',
+      departmentName: this.form.departmentName.trim() || undefined,
       type: this.form.type,
       startDate: this.form.startDate,
       endDate: this.form.endDate,
       days,
       status: 'Pending',
-      createdAt: this.getToday(),
-      note: this.form.note.trim(),
+      note: this.form.note.trim() || undefined,
     };
 
-    this.leaveService.addLeave(newLeave);
-    this.leaves = this.leaveService.getLeaves();
-
-    this.currentPage = 1;
-    this.resetForm();
-
-    const user = this.authService.getUser();
-    if (user && this.authService.isEmployee()) {
-      this.form.employeeName = user.name;
-      this.form.email = user.email;
-    }
-
-    this.closeModal();
-    this.showToastMessage('Leave request created successfully.', 'success');
+    this.leaveService.createLeave(payload).subscribe({
+      next: () => {
+        this.loadLeaves();
+        this.currentPage = 1;
+        this.resetForm();
+        this.prefillEmployeeForm();
+        this.closeModal();
+        this.showToastMessage('Leave request created successfully.', 'success');
+      },
+      error: (err) => {
+        console.error('Create leave error:', err);
+        this.showToastMessage('Impossible de créer la demande.', 'error');
+      },
+    });
   }
 
   dismissToast(): void {
@@ -252,23 +272,25 @@ export class LeavesComponent {
     }, 2800);
   }
 
+  private prefillEmployeeForm(): void {
+    const user = this.authService.getUser();
+
+    if (user && this.authService.isEmployee()) {
+      this.form.employeeName = user.name;
+      this.form.email = user.email;
+    }
+  }
+
   private resetForm(): void {
     this.form = {
       employeeName: '',
       email: '',
+      departmentName: '',
       type: 'Annual',
       startDate: '',
       endDate: '',
       note: '',
     };
-  }
-
-  private getToday(): string {
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
   }
 
   private calculateDays(startDate: string, endDate: string): number {
