@@ -1,5 +1,6 @@
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -7,38 +8,41 @@ import {
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Department } from 'src/departments/department.entity';
-import { User } from 'src/users/user.entity';
-import { LeaveRequest } from 'src/leaves/leave-request.entity';
+import { Department } from '../departments/department.entity';
+import { User } from '../users/user.entity';
+import { LeaveRequest } from '../leaves/leave-request.entity';
 
 export type EmployeeStatus = 'Active' | 'Inactive';
 
 @Entity('employees')
 export class Employee {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ name: 'first_name', length: 100 })
-  firstName: string;
+  firstName!: string;
 
   @Column({ name: 'last_name', length: 100 })
-  lastName: string;
+  lastName!: string;
 
   @Column({ unique: true, length: 150 })
-  email: string;
+  email!: string;
 
   @Column({ length: 150 })
-  position: string;
+  position!: string;
 
   @Column({
     type: 'varchar',
     length: 20,
     default: 'Active',
   })
-  status: EmployeeStatus;
+  status!: EmployeeStatus;
 
   @Column({ name: 'photo_url', type: 'text', nullable: true })
   photoUrl?: string;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 
   @ManyToOne(() => Department, (department) => department.employees, {
     nullable: true,
@@ -55,11 +59,11 @@ export class Employee {
   manager?: Employee;
 
   @OneToMany(() => Employee, (employee) => employee.manager)
-  teamMembers: Employee[];
+  teamMembers!: Employee[];
 
   @OneToOne(() => User, (user) => user.employee)
-  user: User;
+  user!: User;
 
   @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.employee)
-  leaveRequests: LeaveRequest[];
+  leaveRequests!: LeaveRequest[];
 }

@@ -1,17 +1,25 @@
-import { IsEmail, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
+import type { UserRole } from '../../users/user.entity';
 
 export class CreateEmployeeDto {
   @IsString()
-  firstName: string;
+  firstName!: string;
 
   @IsString()
-  lastName: string;
+  lastName!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
-  position: string;
+  position!: string;
 
   @IsOptional()
   @IsString()
@@ -20,4 +28,17 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString()
   photoUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  createAccount?: boolean;
+
+  @IsOptional()
+  @IsString()
+  role?: UserRole;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  managerId?: number;
 }

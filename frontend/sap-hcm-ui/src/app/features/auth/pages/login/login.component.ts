@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { AuthService, UserRole } from '../../../../core/services/auth.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -14,8 +14,8 @@ import { AuthService, UserRole } from '../../../../core/services/auth.service';
 export class LoginComponent {
   email = '';
   password = '';
-  role: UserRole = 'EMPLOYEE';
   error = '';
+  isSubmitting = false;
 
   constructor(
     private authService: AuthService,
@@ -25,10 +25,40 @@ export class LoginComponent {
   submit(): void {
     this.error = '';
 
-    const success = this.authService.login(this.email, this.password, this.role);
-
-    if (!success) {
+    if (!this.email.trim() || !this.password.trim()) {
       this.error = 'Veuillez remplir tous les champs.';
+      return;
+    }
+
+    if (this.isSubmitting) return;
+    this.isSubmitting = true;
+
+    this.authService.login(this.email.trim(), this.password.trim()).subscribe({
+      next: () => {
+        this.isSubmitting = false;
+
+        if (this.authService.needsPasswordChange()) {
+          this.router.navigate(['/change-password']);
+          return;
+        }
+
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        this.isSubmitting = false;
+        this.error =
+          err?.error?.message === 'Invalid credentials'
+            ? 'Email ou mot de passe incorrect.'
+            : 'Connexion impossible.';
+      },
+    });
+  }
+
+  ngOnInit(): void {
+    if (!this.authService.isAuthenticated()) return;
+
+    if (this.authService.needsPasswordChange()) {
+      this.router.navigate(['/change-password']);
       return;
     }
 

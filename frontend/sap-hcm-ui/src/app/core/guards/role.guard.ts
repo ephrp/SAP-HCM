@@ -9,11 +9,17 @@ export function roleGuard(allowedRoles: UserRole[]): CanActivateFn {
 
     const role = authService.getRole();
 
-    if (role && allowedRoles.includes(role)) {
-      return true;
+    // ❌ pas connecté
+    if (!role) {
+      return router.createUrlTree(['/login']);
     }
 
-    router.navigate(['/dashboard']);
-    return false;
+    // ❌ mauvais rôle
+    if (!allowedRoles.includes(role)) {
+      return router.createUrlTree(['/dashboard']);
+    }
+
+    // ✅ autorisé
+    return true;
   };
 }

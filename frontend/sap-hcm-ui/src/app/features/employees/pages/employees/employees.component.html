@@ -5,11 +5,11 @@
       <p>Gestion des employés de l’entreprise.</p>
     </div>
 
-    <button class="btn btn--primary" type="button" (click)="openCreate()">+ Add employee</button>
-
+    <button class="btn btn--primary" type="button" (click)="openCreate()">
+      + Add employee
+    </button>
   </div>
 
-  <!-- Toolbar -->
   <div class="toolbar">
     <div class="toolbar__left">
       <div class="search">
@@ -40,7 +40,9 @@
           </select>
         </label>
 
-        <button class="btn btn--ghost" type="button" (click)="resetFilters()">Reset</button>
+        <button class="btn btn--ghost" type="button" (click)="resetFilters()">
+          Reset
+        </button>
       </div>
     </div>
 
@@ -49,7 +51,6 @@
     </div>
   </div>
 
-  <!-- Bulk bar (shows only when selectedCount > 0) -->
   <div class="bulkbar" *ngIf="selectedCount > 0">
     <div class="bulkbar__left">
       <span class="bulkbar__count">{{ selectedCount }} sélectionné(s)</span>
@@ -57,13 +58,18 @@
     </div>
 
     <div class="bulkbar__right">
-      <button class="btn btn--ghost" type="button" (click)="bulkSetActive()">Set Active</button>
-      <button class="btn btn--ghost" type="button" (click)="bulkSetInactive()">Set Inactive</button>
-      <button class="btn btn--danger" type="button" (click)="openBulkDelete()">Delete</button>
+      <button class="btn btn--ghost" type="button" (click)="bulkSetActive()">
+        Set Active
+      </button>
+      <button class="btn btn--ghost" type="button" (click)="bulkSetInactive()">
+        Set Inactive
+      </button>
+      <button class="btn btn--danger" type="button" (click)="openBulkDelete()">
+        Delete
+      </button>
     </div>
   </div>
 
-  <!-- Table -->
   <div class="panel">
     <table class="table">
       <thead>
@@ -92,6 +98,8 @@
           <th class="th-sort" (click)="setSort('department')">
             Département <span class="sort">{{ sortIcon('department') }}</span>
           </th>
+
+          <th>Manager</th>
 
           <th class="th-sort" (click)="setSort('position')">
             Poste <span class="sort">{{ sortIcon('position') }}</span>
@@ -129,7 +137,9 @@
                 [alt]="employee.firstName + ' ' + employee.lastName"
               />
               <div class="emp__meta">
-                <div class="emp__name">{{ employee.firstName }} {{ employee.lastName }}</div>
+                <div class="emp__name">
+                  {{ employee.firstName }} {{ employee.lastName }}
+                </div>
                 <div class="emp__sub muted">{{ employee.position }}</div>
               </div>
             </div>
@@ -137,6 +147,12 @@
 
           <td class="muted">{{ employee.email }}</td>
           <td>{{ employee.department?.name || '-' }}</td>
+          <td>
+            {{ employee.manager?.firstName || '-' }}
+            <ng-container *ngIf="employee.manager?.lastName">
+              {{ employee.manager?.lastName }}
+            </ng-container>
+          </td>
           <td>{{ employee.position }}</td>
 
           <td>
@@ -150,7 +166,12 @@
           </td>
 
           <td class="actions">
-            <button class="icon-btn" type="button" title="Edit" (click)="openEdit(employee)">
+            <button
+              class="icon-btn"
+              type="button"
+              title="Edit"
+              (click)="openEdit(employee)"
+            >
               ✏️
             </button>
             <button
@@ -159,21 +180,24 @@
               title="Delete"
               (click)="openDelete(employee)"
             >
-              🗑
+              🗑️
             </button>
           </td>
         </tr>
 
         <tr *ngIf="totalItems === 0">
-          <td colspan="8" class="empty">Aucun employé ne correspond aux filtres.</td>
+          <td colspan="9" class="empty">
+            Aucun employé ne correspond aux filtres.
+          </td>
         </tr>
       </tbody>
     </table>
 
-    <!-- Footer: pagination -->
     <div class="table-footer" *ngIf="totalItems > 0">
       <div class="table-footer__left">
-        <span class="muted">Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}</span>
+        <span class="muted">
+          Showing {{ startIndex + 1 }}–{{ endIndex }} of {{ totalItems }}
+        </span>
       </div>
 
       <div class="table-footer__right">
@@ -221,20 +245,32 @@
     </div>
   </div>
 
-  <!-- Create/Edit Modal -->
   <div class="modal" *ngIf="showModal" (click)="closeModal()">
     <div class="modal__content" (click)="$event.stopPropagation()">
       <div class="modal__header">
         <div>
-          <h2>{{ modalMode === 'create' ? 'Ajouter un employé' : 'Modifier un employé' }}</h2>
+          <h2>
+            {{ modalMode === 'create' ? 'Ajouter un employé' : 'Modifier un employé' }}
+          </h2>
           <p class="muted">
-            {{ modalMode === 'create' ? "Données mock (frontend)." : "Modification mock (frontend)." }}
+            {{
+              modalMode === 'create'
+                ? "Créez d'abord la fiche employé, puis définissez si cette personne a un accès à la plateforme."
+                : "Modification de la fiche employé et de sa hiérarchie."
+            }}
           </p>
         </div>
         <button class="icon-btn" type="button" (click)="closeModal()">✕</button>
       </div>
 
       <div class="form">
+        <div style="margin-bottom: 18px;">
+          <h3 style="margin: 0 0 6px 0;">Informations employé</h3>
+          <p class="muted" style="margin: 0;">
+            Données RH de base : identité, département, poste et rattachement.
+          </p>
+        </div>
+
         <div class="form__grid">
           <label class="field">
             <span class="field__label">First name *</span>
@@ -248,7 +284,11 @@
 
           <label class="field field--full">
             <span class="field__label">Email *</span>
-            <input class="field__control" type="email" [(ngModel)]="form.email" />
+            <input
+              class="field__control"
+              type="email"
+              [(ngModel)]="form.email"
+            />
           </label>
 
           <label class="field">
@@ -269,9 +309,78 @@
             </select>
           </label>
 
+          <label
+            class="field"
+            *ngIf="!form.createAccount || form.role === 'EMPLOYEE'"
+          >
+            <span class="field__label">Manager direct</span>
+            <select class="field__control" [(ngModel)]="form.managerId">
+              <option [ngValue]="null">Aucun manager</option>
+              <option
+                *ngFor="let manager of managerOptions"
+                [ngValue]="manager.id"
+              >
+                {{ manager.firstName }} {{ manager.lastName }}
+              </option>
+            </select>
+          </label>
+
+          <div
+            class="field"
+            *ngIf="form.createAccount && (form.role === 'MANAGER' || form.role === 'HR_ADMIN')"
+          >
+            <span class="field__label">Hiérarchie</span>
+            <div class="field__control" style="display:flex;align-items:center;">
+              Aucun manager direct requis pour ce type d’accès.
+            </div>
+          </div>
+
           <label class="field field--full">
             <span class="field__label">Photo URL (optionnel)</span>
             <input class="field__control" [(ngModel)]="form.photoUrl" />
+          </label>
+        </div>
+
+        <div style="margin: 24px 0 18px 0;">
+          <h3 style="margin: 0 0 6px 0;">Accès à la plateforme</h3>
+          <p class="muted" style="margin: 0;">
+            Définis ici si cet employé peut se connecter, et avec quels droits.
+          </p>
+        </div>
+
+        <div class="form__grid">
+          <label class="field field--full" *ngIf="modalMode === 'create'">
+            <span class="field__label">Créer un compte utilisateur</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input
+  type="checkbox"
+  [(ngModel)]="form.createAccount"
+  (ngModelChange)="onCreateAccountChange()"
+/>
+              <span class="muted">
+                Créer automatiquement le compte lié à cet employé
+              </span>
+            </div>
+          </label>
+
+          <label
+            class="field field--full"
+            *ngIf="modalMode === 'create' && form.createAccount"
+          >
+            <span class="field__label">Type d’accès à la plateforme</span>
+            <select
+  class="field__control"
+  [(ngModel)]="form.role"
+  (ngModelChange)="onRoleChange()"
+>
+              <option value="EMPLOYEE">EMPLOYEE</option>
+              <option value="MANAGER">MANAGER</option>
+              <option value="HR_ADMIN">HR_ADMIN</option>
+            </select>
+
+            <small class="muted" style="display:block; margin-top:8px;">
+              EMPLOYEE : accès standard • MANAGER : peut valider les congés de son équipe • HR_ADMIN : accès complet RH
+            </small>
           </label>
         </div>
 
@@ -279,7 +388,12 @@
           <div class="upload__left">
             <label class="upload__btn">
               Upload photo
-              <input type="file" accept="image/*" (change)="onFileSelected($event)" hidden />
+              <input
+                type="file"
+                accept="image/*"
+                (change)="onFileSelected($event)"
+                hidden
+              />
             </label>
             <p class="muted upload__hint">PNG/JPG — preview immédiat.</p>
           </div>
@@ -293,8 +407,14 @@
           </div>
         </div>
 
+        <p *ngIf="accountInfoMessage" class="muted" style="margin-top: 12px;">
+          {{ accountInfoMessage }}
+        </p>
+
         <div class="modal__actions">
-          <button class="btn btn--ghost" type="button" (click)="closeModal()">Cancel</button>
+          <button class="btn btn--ghost" type="button" (click)="closeModal()">
+            Cancel
+          </button>
           <button class="btn" type="button" (click)="saveEmployee()">
             {{ modalMode === 'create' ? 'Add employee' : 'Save changes' }}
           </button>
@@ -303,7 +423,6 @@
     </div>
   </div>
 
-  <!-- Single Delete Confirm Modal -->
   <div class="modal" *ngIf="showDelete" (click)="closeDelete()">
     <div class="modal__content modal__content--small" (click)="$event.stopPropagation()">
       <div class="modal__header">
@@ -318,13 +437,16 @@
       </div>
 
       <div class="modal__actions">
-        <button class="btn btn--ghost" type="button" (click)="closeDelete()">Cancel</button>
-        <button class="btn btn--danger" type="button" (click)="confirmDelete()">Delete</button>
+        <button class="btn btn--ghost" type="button" (click)="closeDelete()">
+          Cancel
+        </button>
+        <button class="btn btn--danger" type="button" (click)="confirmDelete()">
+          Delete
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Bulk Delete Confirm Modal -->
   <div class="modal" *ngIf="showBulkDelete" (click)="closeBulkDelete()">
     <div class="modal__content modal__content--small" (click)="$event.stopPropagation()">
       <div class="modal__header">
@@ -338,8 +460,12 @@
       </div>
 
       <div class="modal__actions">
-        <button class="btn btn--ghost" type="button" (click)="closeBulkDelete()">Cancel</button>
-        <button class="btn btn--danger" type="button" (click)="confirmBulkDelete()">Delete</button>
+        <button class="btn btn--ghost" type="button" (click)="closeBulkDelete()">
+          Cancel
+        </button>
+        <button class="btn btn--danger" type="button" (click)="confirmBulkDelete()">
+          Delete
+        </button>
       </div>
     </div>
   </div>

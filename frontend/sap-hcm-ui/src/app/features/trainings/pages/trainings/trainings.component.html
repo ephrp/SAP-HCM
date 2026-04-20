@@ -5,10 +5,19 @@
       <p>Catalogue et suivi des formations (MVP).</p>
     </div>
 
-    <button class="btn btn--primary" type="button" (click)="openModal()">
+    <button
+      *ngIf="canManageTrainings"
+      class="btn btn--primary"
+      type="button"
+      (click)="openModal()"
+    >
       + New training
     </button>
   </div>
+
+  <p *ngIf="errorMessage" class="error-banner">
+    {{ errorMessage }}
+  </p>
 
   <div class="toolbar">
     <div class="toolbar__left">
@@ -66,6 +75,7 @@
           <th>Level</th>
           <th>Status</th>
           <th>Start date</th>
+          <th *ngIf="canManageTrainings">Actions</th>
         </tr>
       </thead>
 
@@ -100,10 +110,28 @@
           </td>
 
           <td class="muted">{{ training.startDate }}</td>
+
+          <td *ngIf="canManageTrainings" class="actions">
+            <button
+              class="btn btn--ghost btn--sm"
+              type="button"
+              (click)="openEdit(training)"
+            >
+              Edit
+            </button>
+
+            <button
+              class="btn btn--ghost btn--sm danger"
+              type="button"
+              (click)="deleteTraining(training)"
+            >
+              Delete
+            </button>
+          </td>
         </tr>
 
         <tr *ngIf="totalItems === 0">
-          <td colspan="8" class="empty">
+          <td [attr.colspan]="canManageTrainings ? 9 : 8" class="empty">
             <div class="empty__box">
               <div class="empty__title">Aucun résultat</div>
               <div class="muted">Essaie de modifier les filtres ou la recherche.</div>
@@ -150,13 +178,18 @@
     </div>
   </div>
 
-  <!-- Modal -->
   <div class="modal" *ngIf="showModal" (click)="closeModal()">
     <div class="modal__content" (click)="$event.stopPropagation()">
       <div class="modal__header">
         <div>
-          <h2>New training</h2>
-          <p class="muted">Créer une nouvelle formation (frontend mock).</p>
+          <h2>{{ modalMode === 'create' ? 'New training' : 'Edit training' }}</h2>
+          <p class="muted">
+            {{
+              modalMode === 'create'
+                ? 'Créer une nouvelle formation.'
+                : 'Modifier une formation existante.'
+            }}
+          </p>
         </div>
         <button class="icon-btn" type="button" (click)="closeModal()">✕</button>
       </div>
@@ -181,12 +214,12 @@
           <label class="field">
             <span class="field__label">Hours *</span>
             <input
-           class="field__control"
-           type="number"
-           min="1"
-           step="1"
-           [(ngModel)]="form.durationHours"
-         />
+              class="field__control"
+              type="number"
+              min="1"
+              step="1"
+              [(ngModel)]="form.durationHours"
+            />
           </label>
 
           <label class="field">
@@ -217,15 +250,14 @@
           <button class="btn btn--ghost" type="button" (click)="closeModal()">
             Cancel
           </button>
-          <button class="btn btn--primary" type="button" (click)="createTraining()">
-            Create training
+          <button class="btn btn--primary" type="button" (click)="saveTraining()" [disabled]="isSubmitting">
+            {{ isSubmitting ? (modalMode === 'create' ? 'Creating...' : 'Saving...') : (modalMode === 'create' ? 'Create training' : 'Save changes') }}
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Toast -->
   <div
     class="toast"
     *ngIf="showToast"

@@ -14,39 +14,45 @@ export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
 @Entity('leave_requests')
 export class LeaveRequest {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @ManyToOne(() => Employee, (employee) => employee.leaveRequests, {
     nullable: false,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'employee_id' })
-  employee: Employee;
+  employee!: Employee;
 
   @Column({
     type: 'varchar',
     length: 20,
   })
-  type: LeaveType;
+  type!: LeaveType;
 
   @Column({ name: 'start_date', type: 'date' })
-  startDate: string;
+  startDate!: string;
 
   @Column({ name: 'end_date', type: 'date' })
-  endDate: string;
+  endDate!: string;
 
   @Column({ type: 'int' })
-  days: number;
+  days!: number;
 
   @Column({
     type: 'varchar',
     length: 20,
     default: 'Pending',
   })
-  status: LeaveStatus;
+  status!: LeaveStatus;
 
   @Column({ type: 'text', nullable: true })
   note?: string;
+
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason?: string;
+
+  @Column({ name: 'processed_at', type: 'timestamp', nullable: true })
+  processedAt?: Date;
 
   @ManyToOne(() => User, (user) => user.approvedLeaveRequests, {
     nullable: true,

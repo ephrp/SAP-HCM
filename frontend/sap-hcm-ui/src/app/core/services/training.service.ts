@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 export type TrainingStatus = 'Planned' | 'Ongoing' | 'Completed';
 export type TrainingLevel = 'Beginner' | 'Intermediate' | 'Advanced';
@@ -14,48 +16,54 @@ export interface Training {
   startDate: string;
 }
 
+export interface CreateTrainingPayload {
+  title: string;
+  category: string;
+  provider: string;
+  durationHours: number;
+  level: TrainingLevel;
+  status: TrainingStatus;
+  startDate: string;
+}
+
+export interface UpdateTrainingPayload {
+  title?: string;
+  category?: string;
+  provider?: string;
+  durationHours?: number;
+  level?: TrainingLevel;
+  status?: TrainingStatus;
+  startDate?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class TrainingService {
-  private trainings: Training[] = [
-    {
-      id: 201,
-      title: 'Angular Advanced',
-      category: 'Frontend',
-      provider: 'OpenClassrooms',
-      durationHours: 18,
-      level: 'Advanced',
-      status: 'Ongoing',
-      startDate: '2026-02-05',
-    },
-    {
-      id: 202,
-      title: 'Leadership Essentials',
-      category: 'Management',
-      provider: 'Coursera',
-      durationHours: 10,
-      level: 'Beginner',
-      status: 'Planned',
-      startDate: '2026-03-01',
-    },
-    {
-      id: 203,
-      title: 'HR Analytics Basics',
-      category: 'HR',
-      provider: 'Udemy',
-      durationHours: 12,
-      level: 'Intermediate',
-      status: 'Completed',
-      startDate: '2026-01-10',
-    },
-  ];
+  private readonly apiUrl = 'http://localhost:3000/trainings';
 
-  getTrainings(): Training[] {
-    return this.trainings;
+  constructor(private http: HttpClient) {}
+
+  getTrainings(): Observable<Training[]> {
+    return this.http.get<Training[]>(this.apiUrl);
   }
 
-  addTraining(training: Training): void {
-    this.trainings = [training, ...this.trainings];
+  getTrainingById(id: number): Observable<Training> {
+    return this.http.get<Training>(`${this.apiUrl}/${id}`);
+  }
+
+  createTraining(payload: CreateTrainingPayload): Observable<Training> {
+    return this.http.post<Training>(this.apiUrl, payload);
+  }
+
+  updateTraining(
+    id: number,
+    payload: UpdateTrainingPayload
+  ): Observable<Training> {
+    return this.http.patch<Training>(`${this.apiUrl}/${id}`, payload);
+  }
+
+  deleteTraining(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
   }
 }

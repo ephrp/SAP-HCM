@@ -35,6 +35,10 @@ export class ApprovalsComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
 
+  showRejectModal = false;
+  rejectTarget: LeaveRequest | null = null;
+  rejectionReason = '';
+
   constructor(private leaveService: LeaveService) {}
 
   ngOnInit(): void {
@@ -146,10 +150,32 @@ export class ApprovalsComponent implements OnInit {
     });
   }
 
-  reject(item: LeaveRequest): void {
-    this.leaveService.rejectLeave(item.id).subscribe({
+  openRejectModal(item: LeaveRequest): void {
+    this.rejectTarget = item;
+    this.rejectionReason = '';
+    this.showRejectModal = true;
+  }
+
+  closeRejectModal(): void {
+    this.showRejectModal = false;
+    this.rejectTarget = null;
+    this.rejectionReason = '';
+  }
+
+  confirmReject(): void {
+    if (!this.rejectTarget) return;
+
+    const reason = this.rejectionReason.trim();
+
+    if (!reason) {
+      this.showToastMessage('Veuillez saisir un motif de refus.', 'error');
+      return;
+    }
+
+    this.leaveService.rejectLeave(this.rejectTarget.id, reason).subscribe({
       next: () => {
         this.loadApprovals();
+        this.closeRejectModal();
         this.showToastMessage('Request rejected.', 'error');
       },
       error: (err) => {

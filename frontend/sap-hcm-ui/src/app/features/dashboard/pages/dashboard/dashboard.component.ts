@@ -1,25 +1,14 @@
-import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
-import { forkJoin } from 'rxjs';
 
-import { AuthService } from '../../../../core/services/auth.service';
-import {
-  Employee,
-  EmployeeService,
-} from '../../../../core/services/employee.service';
-import {
-  LeaveRequest,
-  LeaveService,
-} from '../../../../core/services/leave.service';
-import {
-  Training,
-  TrainingService,
-} from '../../../../core/services/training.service';
+import { DashboardService } from '../../../../core/services/dashboard.service';
+
+type DashboardScope = 'global' | 'team' | 'personal' | 'unknown';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DatePipe],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
 })
@@ -28,13 +17,12 @@ export class DashboardComponent implements OnInit {
 
   constructor(
     @Inject(PLATFORM_ID) platformId: object,
-    private authService: AuthService,
-    private employeeService: EmployeeService,
-    private leaveService: LeaveService,
-    private trainingService: TrainingService
+    private dashboardService: DashboardService,
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
   }
+
+  scope: DashboardScope = 'unknown';
 
   stats = {
     totalEmployees: 0,
@@ -43,103 +31,156 @@ export class DashboardComponent implements OnInit {
     departments: 0,
   };
 
+  profile: {
+    fullName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    position: string;
+    status: 'Active' | 'Inactive';
+    departmentName: string;
+    managerName: string;
+    photoUrl?: string;
+    createdAt: string;
+  } | null = null;
+
+  leaveSummary: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  } | null = null;
+
+  leaveHistory: Array<{
+    id: number;
+    type: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    startDate: string;
+    endDate: string;
+    days: number;
+  }> = [];
+
   showVideo = false;
   isLoading = false;
   errorMessage = '';
 
   employeeTrend: number[] = [0, 0, 0, 0, 0, 0];
-  readonly chartMonths = ['Oct', 'Nov', 'Déc', 'Jan', 'Fév', 'Mar'];
+  chartMonths: string[] = [];
 
   ngOnInit(): void {
+    if (!this.isBrowser) return;
     this.refreshDashboard();
   }
 
   refreshDashboard(): void {
+    if (!this.isBrowser) return;
+
     this.isLoading = true;
     this.errorMessage = '';
 
-    const user = this.authService.getUser();
-    const trainings: Training[] = this.trainingService.getTrainings();
-
-    forkJoin({
-      employees: this.employeeService.getEmployees(),
-      leaves: this.leaveService.getLeaves(),
-    }).subscribe({
-      next: ({
-        employees,
-        leaves,
-      }: {
-        employees: Employee[];
-        leaves: LeaveRequest[];
-      }) => {
-        const activeEmployees = employees.filter(
-          (employee: Employee) => employee.status === 'Active'
-        );
-
-        const visibleLeaves =
-          this.authService.isEmployee() && user?.email
-            ? leaves.filter(
-                (leave: LeaveRequest) => leave.employee.email === user.email
-              )
-            : leaves;
-
-        const pendingLeaves = visibleLeaves.filter(
-          (leave: LeaveRequest) => leave.status === 'Pending'
-        ).length;
-
-        const totalEmployees = this.authService.isEmployee()
-          ? 1
-          : activeEmployees.length;
-
-        const departments = this.authService.isEmployee()
-          ? 1
-          : new Set(
-              activeEmployees
-                .map((employee: Employee) => employee.department?.name)
-                .filter((name): name is string => !!name)
-            ).size;
-
-        const trainingHours = trainings.reduce(
-          (sum: number, training: Training) => sum + training.durationHours,
-          0
-        );
-
-        this.stats = {
-          totalEmployees,
-          pendingLeaves,
-          trainingHours,
-          departments,
-        };
-
-        this.buildEmployeeTrend(totalEmployees);
+    this.dashboardService.getStats().subscribe({
+      next: (response) => {
+        this.scope = response.scope;
+        this.stats = response.stats;
+        this.chartMonths = response.chartMonths;
+        this.employeeTrend = response.employeeTrend;
+        this.profile = response.profile;
+        this.leaveSummary = response.leaveSummary;
+        this.leaveHistory = response.leaveHistory;
         this.isLoading = false;
       },
       error: (err) => {
         console.error('Dashboard load error:', err);
 
+        this.scope = 'unknown';
         this.stats = {
           totalEmployees: 0,
           pendingLeaves: 0,
           trainingHours: 0,
           departments: 0,
         };
-
-        this.buildEmployeeTrend(0);
+        this.profile = null;
+        this.leaveSummary = null;
+        this.leaveHistory = [];
+        this.chartMonths = [];
+        this.employeeTrend = [0, 0, 0, 0, 0, 0];
         this.errorMessage = 'Impossible de charger les données du dashboard.';
         this.isLoading = false;
       },
     });
   }
 
-  private buildEmployeeTrend(totalEmployees: number): void {
-    this.employeeTrend = [
-      Math.max(0, totalEmployees - 10),
-      Math.max(0, totalEmployees - 8),
-      Math.max(0, totalEmployees - 6),
-      Math.max(0, totalEmployees - 4),
-      Math.max(0, totalEmployees - 2),
-      totalEmployees,
-    ];
+  get dashboardTitle(): string {
+    if (this.scope === 'global') return 'Dashboard RH global';
+    if (this.scope === 'team') return 'Dashboard manager';
+    if (this.scope === 'personal') return 'Mon espace personnel';
+    return 'Dashboard RH';
+  }
+
+  get dashboardSubtitle(): string {
+    if (this.scope === 'global') return 'Vue synthèse de toute l’entreprise.';
+    if (this.scope === 'team') return 'Vue synthèse des indicateurs de votre équipe.';
+    if (this.scope === 'personal') return 'Vos informations, vos congés et votre activité récente.';
+    return 'Vue synthèse des indicateurs clés.';
+  }
+
+  get totalEmployeesLabel(): string {
+    if (this.scope === 'team') return 'Membres de l’équipe';
+    if (this.scope === 'personal') return 'Mon profil';
+    return 'Effectif total';
+  }
+
+  get pendingLeavesLabel(): string {
+    if (this.scope === 'team') return 'Congés en attente';
+    if (this.scope === 'personal') return 'Mes congés en attente';
+    return 'Congés en attente';
+  }
+
+  get departmentsLabel(): string {
+    if (this.scope === 'team') return 'Départements couverts';
+    if (this.scope === 'personal') return 'Département';
+    return 'Départements';
+  }
+
+  get canShowChart(): boolean {
+    return this.scope === 'global' || this.scope === 'team';
+  }
+
+  get isPersonalDashboard(): boolean {
+    return this.scope === 'personal';
+  }
+
+  get profileAvatar(): string {
+    if (this.profile?.photoUrl?.trim()) return this.profile.photoUrl;
+    if (this.profile?.email) {
+      return `https://i.pravatar.cc/150?u=${encodeURIComponent(this.profile.email)}`;
+    }
+    return 'https://i.pravatar.cc/150?u=employee';
+  }
+
+  get trendPercentage(): number {
+    if (this.employeeTrend.length < 2) return 0;
+
+    const previous = this.employeeTrend[this.employeeTrend.length - 2];
+    const current = this.employeeTrend[this.employeeTrend.length - 1];
+
+    if (previous === 0) {
+      return current > 0 ? 100 : 0;
+    }
+
+    return Math.round(((current - previous) / previous) * 100);
+  }
+
+  get trendLabel(): string {
+    if (this.trendPercentage > 0) return `+${this.trendPercentage}%`;
+    if (this.trendPercentage < 0) return `${this.trendPercentage}%`;
+    return '0%';
+  }
+
+  get trendDirection(): 'up' | 'down' | 'stable' {
+    if (this.trendPercentage > 0) return 'up';
+    if (this.trendPercentage < 0) return 'down';
+    return 'stable';
   }
 
   getChartPoints(): string {

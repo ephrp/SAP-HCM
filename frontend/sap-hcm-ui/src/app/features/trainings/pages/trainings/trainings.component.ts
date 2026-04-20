@@ -1,14 +1,18 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
+  CreateTrainingPayload,
   Training,
   TrainingLevel,
   TrainingService,
   TrainingStatus,
+  UpdateTrainingPayload,
 } from '../../../../core/services/training.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 type ToastType = 'success' | 'error';
+type ModalMode = 'create' | 'edit';
 
 @Component({
   selector: 'app-trainings',
@@ -17,7 +21,7 @@ type ToastType = 'success' | 'error';
   templateUrl: './trainings.component.html',
   styleUrls: ['./trainings.component.scss'],
 })
-export class TrainingsComponent {
+export class TrainingsComponent implements OnInit {
   search = '';
   statusFilter: 'All' | TrainingStatus = 'All';
   levelFilter: 'All' | TrainingLevel = 'All';
@@ -27,6 +31,9 @@ export class TrainingsComponent {
   pageSizeOptions = [5, 10, 20];
 
   showModal = false;
+  modalMode: ModalMode = 'create';
+  editingTrainingId: number | null = null;
+  isSubmitting = false;
 
   form: {
     title: string;
@@ -46,16 +53,26 @@ export class TrainingsComponent {
     startDate: '',
   };
 
-  // Toast
   showToast = false;
   toastMessage = '';
   toastType: ToastType = 'success';
   private toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
   trainings: Training[] = [];
+  isLoading = false;
+  errorMessage = '';
 
-  constructor(private trainingService: TrainingService) {
-    this.trainings = this.trainingService.getTrainings();
+  constructor(
+    private trainingService: TrainingService,
+    public authService: AuthService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadTrainings();
+  }
+
+  get canManageTrainings(): boolean {
+    return this.authService.isHrAdmin();
   }
 
   get filteredTrainings(): Training[] {
@@ -101,6 +118,23 @@ export class TrainingsComponent {
     return this.filteredTrainings.slice(this.startIndex, this.endIndex);
   }
 
+  loadTrainings(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.trainingService.getTrainings().subscribe({
+      next: (data) => {
+        this.trainings = data;
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Load trainings error:', err);
+        this.errorMessage = 'Impossible de charger les formations.';
+        this.isLoading = false;
+      },
+    });
+  }
+
   resetFilters(): void {
     this.search = '';
     this.statusFilter = 'All';
@@ -125,14 +159,42 @@ export class TrainingsComponent {
   }
 
   openModal(): void {
+    if (!this.canManageTrainings) return;
+
+    this.modalMode = 'create';
+    this.editingTrainingId = null;
+    this.resetForm();
+    this.showModal = true;
+  }
+
+  openEdit(training: Training): void {
+    if (!this.canManageTrainings) return;
+
+    this.modalMode = 'edit';
+    this.editingTrainingId = training.id;
+    this.form = {
+      title: training.title,
+      category: training.category,
+      provider: training.provider,
+      durationHours: training.durationHours,
+      level: training.level,
+      status: training.status,
+      startDate: training.startDate,
+    };
     this.showModal = true;
   }
 
   closeModal(): void {
     this.showModal = false;
+    this.modalMode = 'create';
+    this.editingTrainingId = null;
+    this.isSubmitting = false;
   }
 
-  createTraining(): void {
+  saveTraining(): void {
+    if (!this.canManageTrainings) return;
+    if (this.isSubmitting) return;
+
     if (
       !this.form.title.trim() ||
       !this.form.category.trim() ||
@@ -148,29 +210,86 @@ export class TrainingsComponent {
       return;
     }
 
-    const nextId =
-      this.trainings.length > 0
-        ? Math.max(...this.trainings.map((t) => t.id)) + 1
-        : 1;
+    this.isSubmitting = true;
 
-    const newTraining: Training = {
-      id: nextId,
-      title: this.form.title.trim(),
-      category: this.form.category.trim(),
-      provider: this.form.provider.trim(),
-      durationHours: this.form.durationHours,
-      level: this.form.level,
-      status: this.form.status,
-      startDate: this.form.startDate,
-    };
+    if (this.modalMode === 'create') {
+      const payload: CreateTrainingPayload = {
+        title: this.form.title.trim(),
+        category: this.form.category.trim(),
+        provider: this.form.provider.trim(),
+        durationHours: this.form.durationHours,
+        level: this.form.level,
+        status: this.form.status,
+        startDate: this.form.startDate,
+      };
 
-    this.trainingService.addTraining(newTraining);
-    this.trainings = this.trainingService.getTrainings();
+      this.trainingService.createTraining(payload).subscribe({
+        next: () => {
+          this.loadTrainings();
+          this.currentPage = 1;
+          this.resetForm();
+          this.closeModal();
+          this.showToastMessage('Training created successfully.', 'success');
+          this.isSubmitting = false;
+        },
+        error: (err) => {
+          console.error('Create training error:', err);
+          this.showToastMessage('Impossible de créer la formation.', 'error');
+          this.isSubmitting = false;
+        },
+      });
 
-    this.currentPage = 1;
-    this.resetForm();
-    this.closeModal();
-    this.showToastMessage('Training created successfully.', 'success');
+      return;
+    }
+
+    if (this.modalMode === 'edit' && this.editingTrainingId != null) {
+      const payload: UpdateTrainingPayload = {
+        title: this.form.title.trim(),
+        category: this.form.category.trim(),
+        provider: this.form.provider.trim(),
+        durationHours: this.form.durationHours,
+        level: this.form.level,
+        status: this.form.status,
+        startDate: this.form.startDate,
+      };
+
+      this.trainingService
+        .updateTraining(this.editingTrainingId, payload)
+        .subscribe({
+          next: () => {
+            this.loadTrainings();
+            this.currentPage = 1;
+            this.closeModal();
+            this.showToastMessage('Training updated successfully.', 'success');
+            this.isSubmitting = false;
+          },
+          error: (err) => {
+            console.error('Update training error:', err);
+            this.showToastMessage('Impossible de modifier la formation.', 'error');
+            this.isSubmitting = false;
+          },
+        });
+    }
+  }
+
+  deleteTraining(training: Training): void {
+    if (!this.canManageTrainings) return;
+
+    const confirmed = window.confirm(
+      `Supprimer la formation "${training.title}" ?`
+    );
+    if (!confirmed) return;
+
+    this.trainingService.deleteTraining(training.id).subscribe({
+      next: () => {
+        this.loadTrainings();
+        this.showToastMessage('Training deleted successfully.', 'success');
+      },
+      error: (err) => {
+        console.error('Delete training error:', err);
+        this.showToastMessage('Impossible de supprimer la formation.', 'error');
+      },
+    });
   }
 
   dismissToast(): void {

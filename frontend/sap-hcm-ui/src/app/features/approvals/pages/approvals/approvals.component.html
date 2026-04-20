@@ -74,72 +74,92 @@
       </thead>
 
       <tbody>
-        <tr *ngFor="let item of paginatedApprovals">
-          <td class="mono">{{ item.id }}</td>
+  <ng-container *ngFor="let item of paginatedApprovals">
+    <tr>
+      <td class="mono">{{ item.id }}</td>
 
-          <td>
-            <div class="who">
-              <div class="who__name">{{ item.employee.firstName }} {{ item.employee.lastName }}</div>
-              <div class="who__sub muted">{{ item.employee.email }}</div>
-            </div>
-          </td>
+      <td>
+        <div class="who">
+          <div class="who__name">{{ item.employee.firstName }} {{ item.employee.lastName }}</div>
+          <div class="who__sub muted">{{ item.employee.email }}</div>
+        </div>
+      </td>
 
-          <td>{{ item.employee.department?.name || '-' }}</td>
+      <td>{{ item.employee.department?.name || '-' }}</td>
 
-          <td>
-            <span class="chip">{{ item.type }}</span>
-          </td>
+      <td>
+        <span class="chip">{{ item.type }}</span>
+      </td>
 
-          <td>
-            <span class="muted">{{ item.startDate }}</span>
-            <span class="muted">→</span>
-            <span class="muted">{{ item.endDate }}</span>
-          </td>
+      <td>
+        <span class="muted">{{ item.startDate }}</span>
+        <span class="muted">→</span>
+        <span class="muted">{{ item.endDate }}</span>
+      </td>
 
-          <td class="mono">{{ item.days }}</td>
+      <td class="mono">{{ item.days }}</td>
 
-          <td>
-            <span
-              class="badge"
-              [class.badge--pending]="item.status === 'Pending'"
-              [class.badge--approved]="item.status === 'Approved'"
-              [class.badge--rejected]="item.status === 'Rejected'"
-            >
-              {{ item.status }}
-            </span>
-          </td>
+      <td>
+        <span
+          class="badge"
+          [class.badge--pending]="item.status === 'Pending'"
+          [class.badge--approved]="item.status === 'Approved'"
+          [class.badge--rejected]="item.status === 'Rejected'"
+        >
+          {{ item.status }}
+        </span>
+      </td>
 
-          <td class="actions">
-            <button
-              class="btn btn--ghost btn--sm"
-              type="button"
-              (click)="approve(item)"
-              [disabled]="item.status === 'Approved'"
-            >
-              Approve
-            </button>
+      <td class="actions">
+        <button
+          class="btn btn--ghost btn--sm"
+          type="button"
+          (click)="approve(item)"
+          [disabled]="item.status === 'Approved'"
+        >
+          Approve
+        </button>
 
-            <button
-              class="btn btn--ghost btn--sm danger"
-              type="button"
-              (click)="reject(item)"
-              [disabled]="item.status === 'Rejected'"
-            >
-              Reject
-            </button>
-          </td>
-        </tr>
+        <button
+          class="btn btn--ghost btn--sm danger"
+          type="button"
+          (click)="openRejectModal(item)"
+          [disabled]="item.status === 'Rejected'"
+        >
+          Reject
+        </button>
+      </td>
+    </tr>
 
-        <tr *ngIf="totalItems === 0">
-          <td colspan="8" class="empty">
-            <div class="empty__box">
-              <div class="empty__title">Aucun résultat</div>
-              <div class="muted">Essaie de modifier les filtres ou la recherche.</div>
-              <button class="btn btn--primary" type="button" (click)="resetFilters()">Reset</button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
+    <tr *ngIf="item.status !== 'Pending' && (item.rejectionReason || item.processedAt || item.approvedByUser)">
+      <td colspan="8" class="muted" style="background: #f8fafc;">
+        <div *ngIf="item.status === 'Rejected' && item.rejectionReason">
+          <strong>Motif du refus :</strong> {{ item.rejectionReason }}
+        </div>
+
+        <div *ngIf="item.approvedByUser || item.processedAt" style="margin-top: 6px;">
+          <strong>Décision prise par :</strong>
+          {{ item.approvedByUser?.email || 'Utilisateur inconnu' }}
+          <span *ngIf="item.approvedByUser?.role">({{ item.approvedByUser?.role }})</span>
+
+          <span *ngIf="item.processedAt">
+            — <strong>Le :</strong> {{ item.processedAt | date:'short' }}
+          </span>
+        </div>
+      </td>
+    </tr>
+  </ng-container>
+
+  <tr *ngIf="totalItems === 0">
+    <td colspan="8" class="empty">
+      <div class="empty__box">
+        <div class="empty__title">Aucun résultat</div>
+        <div class="muted">Essaie de modifier les filtres ou la recherche.</div>
+        <button class="btn btn--primary" type="button" (click)="resetFilters()">Reset</button>
+      </div>
+    </td>
+  </tr>
+</tbody>
     </table>
 
     <div class="table-footer" *ngIf="totalItems > 0">
@@ -170,6 +190,43 @@
 
           <button class="btn btn--ghost" type="button" (click)="nextPage()" [disabled]="currentPage === totalPages">
             →
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" *ngIf="showRejectModal" (click)="closeRejectModal()">
+    <div class="modal__content modal__content--small" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <div>
+          <h2>Motif du refus</h2>
+          <p class="muted">
+            Veuillez expliquer pourquoi la demande de
+            <strong>{{ rejectTarget?.employee?.firstName }} {{ rejectTarget?.employee?.lastName }}</strong>
+            est refusée.
+          </p>
+        </div>
+        <button class="icon-btn" type="button" (click)="closeRejectModal()">✕</button>
+      </div>
+
+      <div class="form">
+        <label class="field">
+          <span class="field__label">Motif *</span>
+          <textarea
+            class="field__control textarea"
+            rows="4"
+            [(ngModel)]="rejectionReason"
+            placeholder="Exemple : période de forte activité, congé déjà accordé à d'autres collègues..."
+          ></textarea>
+        </label>
+
+        <div class="modal__actions">
+          <button class="btn btn--ghost" type="button" (click)="closeRejectModal()">
+            Cancel
+          </button>
+          <button class="btn btn--danger" type="button" (click)="confirmReject()">
+            Confirmer le refus
           </button>
         </div>
       </div>

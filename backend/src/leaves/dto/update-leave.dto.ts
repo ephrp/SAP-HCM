@@ -32,4 +32,8 @@ export class UpdateLeaveDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsString()
+  rejectionReason?: string;
 }

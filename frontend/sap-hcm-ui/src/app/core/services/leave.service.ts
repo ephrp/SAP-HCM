@@ -20,12 +20,16 @@ export interface LeaveRequest {
   days: number;
   status: LeaveStatus;
   note?: string;
+  rejectionReason?: string;
+  processedAt?: string;
+  approvedByUser?: {
+    id: number;
+    email: string;
+    role: string;
+  } | null;
 }
 
 export interface CreateLeavePayload {
-  employeeName: string;
-  email: string;
-  departmentName?: string;
   type: LeaveType;
   startDate: string;
   endDate: string;
@@ -41,6 +45,7 @@ export interface UpdateLeavePayload {
   days?: number;
   status?: LeaveStatus;
   note?: string;
+  rejectionReason?: string;
 }
 
 @Injectable({
@@ -72,10 +77,15 @@ export class LeaveService {
   }
 
   approveLeave(id: number): Observable<LeaveRequest> {
-    return this.updateLeave(id, { status: 'Approved' });
+    return this.updateLeave(id, {
+      status: 'Approved',
+    });
   }
 
-  rejectLeave(id: number): Observable<LeaveRequest> {
-    return this.updateLeave(id, { status: 'Rejected' });
+  rejectLeave(id: number, rejectionReason: string): Observable<LeaveRequest> {
+    return this.updateLeave(id, {
+      status: 'Rejected',
+      rejectionReason,
+    });
   }
 }

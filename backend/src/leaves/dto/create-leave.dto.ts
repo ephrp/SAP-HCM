@@ -1,36 +1,20 @@
-import {
-  IsDateString,
-  IsEmail,
-  IsInt,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+
+import { IsDateString, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import type { LeaveStatus, LeaveType } from '../leave-request.entity';
 
 export class CreateLeaveDto {
   @IsString()
-  employeeName: string;
-
-  @IsEmail()
-  email: string;
-
-  @IsOptional()
-  @IsString()
-  departmentName?: string;
-
-  @IsString()
-  type: LeaveType;
+  type!: LeaveType;
 
   @IsDateString()
-  startDate: string;
+  startDate!: string;
 
   @IsDateString()
-  endDate: string;
+  endDate!: string;
 
   @IsInt()
   @Min(1)
-  days: number;
+  days!: number;
 
   @IsOptional()
   @IsString()

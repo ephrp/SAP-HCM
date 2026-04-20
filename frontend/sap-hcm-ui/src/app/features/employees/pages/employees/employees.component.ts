@@ -6,6 +6,7 @@ import {
   EmployeeService,
   CreateEmployeePayload,
   UpdateEmployeePayload,
+  UserRole,
 } from '../../../../core/services/employee.service';
 
 type StatusFilter = 'All' | 'Active' | 'Inactive';
@@ -24,6 +25,7 @@ export class Employees implements OnInit {
   employees: Employee[] = [];
   isLoading = false;
   errorMessage = '';
+  accountInfoMessage = '';
 
   search = '';
   departmentFilter = 'All';
@@ -41,6 +43,9 @@ export class Employees implements OnInit {
     position: '',
     status: 'Active' as 'Active' | 'Inactive',
     photoUrl: '',
+    createAccount: true,
+    role: 'EMPLOYEE' as UserRole,
+    managerId: null as number | null,
   };
 
   showDelete = false;
@@ -89,71 +94,109 @@ export class Employees implements OnInit {
     const unique = Array.from(
       new Set(
         this.employees
-          .map((e) => e.department?.name)
-          .filter((name): name is string => !!name)
-      )
+          .map((employee) => employee.department?.name)
+          .filter((name): name is string => !!name),
+      ),
     );
 
     return unique.sort((a, b) => a.localeCompare(b));
   }
 
-  private normalize(s: string): string {
-    return s.trim().toLowerCase();
+  get managerOptions(): Employee[] {
+  return this.employees
+    .filter((employee) => {
+      const role = employee.user?.role;
+
+      return (
+        employee.id !== this.editingId &&
+        (role === 'MANAGER' || role === 'HR_ADMIN')
+      );
+    })
+    .slice()
+    .sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(
+        `${b.firstName} ${b.lastName}`,
+      ),
+    );
+}
+
+  shouldShowManagerField(): boolean {
+    return !this.form.createAccount || this.form.role === 'EMPLOYEE';
+  }
+
+  onRoleChange(): void {
+    if (!this.shouldShowManagerField()) {
+      this.form.managerId = null;
+    }
+  }
+
+  onCreateAccountChange(): void {
+    if (!this.shouldShowManagerField()) {
+      this.form.managerId = null;
+    }
+  }
+
+  private normalize(value: string): string {
+    return value.trim().toLowerCase();
   }
 
   private compare(a: string | number, b: string | number): number {
-    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    if (typeof a === 'number' && typeof b === 'number') {
+      return a - b;
+    }
+
     return String(a).localeCompare(String(b));
   }
 
-  private getSortValue(e: Employee, col: SortColumn): string | number {
-    switch (col) {
+  private getSortValue(employee: Employee, column: SortColumn): string | number {
+    switch (column) {
       case 'id':
-        return e.id;
+        return employee.id;
       case 'name':
-        return this.normalize(`${e.firstName} ${e.lastName}`);
+        return this.normalize(`${employee.firstName} ${employee.lastName}`);
       case 'email':
-        return this.normalize(e.email);
+        return this.normalize(employee.email);
       case 'department':
-        return this.normalize(e.department?.name ?? '');
+        return this.normalize(employee.department?.name ?? '');
       case 'position':
-        return this.normalize(e.position);
+        return this.normalize(employee.position);
       case 'status':
-        return e.status;
+        return employee.status;
     }
   }
 
   get filteredEmployees(): Employee[] {
     const q = this.search.trim().toLowerCase();
 
-    return this.employees.filter((e) => {
-      const departmentName = e.department?.name ?? '';
+    return this.employees.filter((employee) => {
+      const departmentName = employee.department?.name ?? '';
 
       const matchesSearch =
         !q ||
-        `${e.firstName} ${e.lastName}`.toLowerCase().includes(q) ||
-        e.email.toLowerCase().includes(q) ||
+        `${employee.firstName} ${employee.lastName}`.toLowerCase().includes(q) ||
+        employee.email.toLowerCase().includes(q) ||
         departmentName.toLowerCase().includes(q) ||
-        e.position.toLowerCase().includes(q);
+        employee.position.toLowerCase().includes(q);
 
-      const matchesDept =
-        this.departmentFilter === 'All' || departmentName === this.departmentFilter;
+      const matchesDepartment =
+        this.departmentFilter === 'All' ||
+        departmentName === this.departmentFilter;
 
       const matchesStatus =
-        this.statusFilter === 'All' || e.status === this.statusFilter;
+        this.statusFilter === 'All' || employee.status === this.statusFilter;
 
-      return matchesSearch && matchesDept && matchesStatus;
+      return matchesSearch && matchesDepartment && matchesStatus;
     });
   }
 
   get sortedEmployees(): Employee[] {
     const list = [...this.filteredEmployees];
-    const dir = this.sortDirection === 'asc' ? 1 : -1;
+    const direction = this.sortDirection === 'asc' ? 1 : -1;
 
     list.sort((a, b) => {
-      const va = this.getSortValue(a, this.sortColumn);
-      const vb = this.getSortValue(b, this.sortColumn);
-      return this.compare(va, vb) * dir;
+      const valueA = this.getSortValue(a, this.sortColumn);
+      const valueB = this.getSortValue(b, this.sortColumn);
+      return this.compare(valueA, valueB) * direction;
     });
 
     return list;
@@ -176,23 +219,33 @@ export class Employees implements OnInit {
   }
 
   get paginatedEmployees(): Employee[] {
-    if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
-    if (this.currentPage < 1) this.currentPage = 1;
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
+
+    if (this.currentPage < 1) {
+      this.currentPage = 1;
+    }
+
     return this.sortedEmployees.slice(this.startIndex, this.endIndex);
   }
 
-  setSort(col: SortColumn): void {
-    if (this.sortColumn === col) {
+  setSort(column: SortColumn): void {
+    if (this.sortColumn === column) {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
-      this.sortColumn = col;
+      this.sortColumn = column;
       this.sortDirection = 'asc';
     }
+
     this.currentPage = 1;
   }
 
-  sortIcon(col: SortColumn): string {
-    if (this.sortColumn !== col) return '↕';
+  sortIcon(column: SortColumn): string {
+    if (this.sortColumn !== column) {
+      return '↕';
+    }
+
     return this.sortDirection === 'asc' ? '↑' : '↓';
   }
 
@@ -221,15 +274,20 @@ export class Employees implements OnInit {
 
   get pages(): number[] {
     const total = this.totalPages;
-    const cur = this.currentPage;
+    const current = this.currentPage;
 
-    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1);
+    if (total <= 5) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
 
-    const start = Math.max(1, cur - 2);
+    const start = Math.max(1, current - 2);
     const end = Math.min(total, start + 4);
     const finalStart = Math.max(1, end - 4);
 
-    return Array.from({ length: end - finalStart + 1 }, (_, i) => finalStart + i);
+    return Array.from(
+      { length: end - finalStart + 1 },
+      (_, i) => finalStart + i,
+    );
   }
 
   get selectedCount(): number {
@@ -249,15 +307,24 @@ export class Employees implements OnInit {
   }
 
   get isAllPageSelected(): boolean {
-    if (this.paginatedEmployees.length === 0) return false;
-    return this.paginatedEmployees.every((e) => this.selectedIds.has(e.id));
+    if (this.paginatedEmployees.length === 0) {
+      return false;
+    }
+
+    return this.paginatedEmployees.every((employee) =>
+      this.selectedIds.has(employee.id),
+    );
   }
 
   toggleSelectAllPage(): void {
     if (this.isAllPageSelected) {
-      this.paginatedEmployees.forEach((e) => this.selectedIds.delete(e.id));
+      this.paginatedEmployees.forEach((employee) =>
+        this.selectedIds.delete(employee.id),
+      );
     } else {
-      this.paginatedEmployees.forEach((e) => this.selectedIds.add(e.id));
+      this.paginatedEmployees.forEach((employee) =>
+        this.selectedIds.add(employee.id),
+      );
     }
   }
 
@@ -265,7 +332,6 @@ export class Employees implements OnInit {
     this.selectedIds.clear();
   }
 
-  // Pour l’instant, on garde bulk en local à faire plus tard côté backend
   bulkSetActive(): void {
     return;
   }
@@ -275,7 +341,10 @@ export class Employees implements OnInit {
   }
 
   openBulkDelete(): void {
-    if (this.selectedCount === 0) return;
+    if (this.selectedCount === 0) {
+      return;
+    }
+
     this.showBulkDelete = true;
   }
 
@@ -285,7 +354,10 @@ export class Employees implements OnInit {
 
   confirmBulkDelete(): void {
     const ids = [...this.selectedIds];
-    if (ids.length === 0) return;
+
+    if (ids.length === 0) {
+      return;
+    }
 
     let completed = 0;
 
@@ -311,6 +383,9 @@ export class Employees implements OnInit {
   openCreate(): void {
     this.modalMode = 'create';
     this.editingId = null;
+    this.accountInfoMessage = '';
+    this.errorMessage = '';
+
     this.form = {
       firstName: '',
       lastName: '',
@@ -319,13 +394,20 @@ export class Employees implements OnInit {
       position: '',
       status: 'Active',
       photoUrl: '',
+      createAccount: true,
+      role: 'EMPLOYEE',
+      managerId: null,
     };
+
     this.showModal = true;
   }
 
   openEdit(employee: Employee): void {
     this.modalMode = 'edit';
     this.editingId = employee.id;
+    this.accountInfoMessage = '';
+    this.errorMessage = '';
+
     this.form = {
       firstName: employee.firstName,
       lastName: employee.lastName,
@@ -334,7 +416,11 @@ export class Employees implements OnInit {
       position: employee.position,
       status: employee.status,
       photoUrl: employee.photoUrl || '',
+      createAccount: false,
+      role: 'EMPLOYEE',
+      managerId: employee.manager?.id ?? null,
     };
+
     this.showModal = true;
   }
 
@@ -352,6 +438,10 @@ export class Employees implements OnInit {
       return;
     }
 
+    if (!this.shouldShowManagerField()) {
+      this.form.managerId = null;
+    }
+
     const finalPhoto =
       this.form.photoUrl?.trim() ||
       `https://i.pravatar.cc/150?u=${encodeURIComponent(this.form.email)}`;
@@ -364,16 +454,25 @@ export class Employees implements OnInit {
         position: this.form.position.trim(),
         departmentName: this.form.department.trim() || undefined,
         photoUrl: finalPhoto,
+        createAccount: this.form.createAccount,
+        role: this.form.createAccount ? this.form.role : undefined,
+        managerId: this.form.managerId ?? undefined,
       };
 
       this.employeeService.addEmployee(payload).subscribe({
-        next: () => {
+        next: (response) => {
           this.fetchEmployees();
           this.currentPage = 1;
-          this.closeModal();
+
+          if (response.accountCreated && response.temporaryPassword) {
+            this.accountInfoMessage = `Compte créé avec succès. Mot de passe temporaire : ${response.temporaryPassword}`;
+          } else {
+            this.accountInfoMessage = 'Employé créé sans compte utilisateur.';
+          }
         },
-        error: () => {
-          this.errorMessage = 'Impossible de créer l’employé.';
+        error: (err) => {
+          this.errorMessage =
+            err?.error?.message ?? 'Impossible de créer l’employé.';
         },
       });
     } else if (this.modalMode === 'edit' && this.editingId != null) {
@@ -384,6 +483,7 @@ export class Employees implements OnInit {
         position: this.form.position.trim(),
         departmentName: this.form.department.trim(),
         photoUrl: finalPhoto,
+        managerId: this.form.managerId ?? undefined,
       };
 
       this.employeeService.updateEmployee(this.editingId, payload).subscribe({
@@ -402,7 +502,10 @@ export class Employees implements OnInit {
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
+
+    if (!file) {
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -422,7 +525,9 @@ export class Employees implements OnInit {
   }
 
   confirmDelete(): void {
-    if (!this.deleteTarget) return;
+    if (!this.deleteTarget) {
+      return;
+    }
 
     this.employeeService.deleteEmployee(this.deleteTarget.id).subscribe({
       next: () => {

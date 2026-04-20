@@ -29,6 +29,7 @@ export class LeavesComponent implements OnInit {
   pageSizeOptions = [5, 10, 20];
 
   showModal = false;
+  editingLeaveId: number | null = null;
 
   form = {
     employeeName: '',
@@ -63,10 +64,12 @@ export class LeavesComponent implements OnInit {
     return this.authService.isManager() || this.authService.isHrAdmin();
   }
 
+  get isEmployeeMode(): boolean {
+    return this.authService.isEmployee();
+  }
+
   get visibleLeaves(): LeaveRequest[] {
-    if (this.canManageLeaves) {
-      return this.leaves;
-    }
+    if (this.canManageLeaves) return this.leaves;
 
     const userEmail = this.authService.getUser()?.email;
     if (!userEmail) return [];
@@ -81,18 +84,13 @@ export class LeavesComponent implements OnInit {
       const fullName =
         `${leave.employee.firstName} ${leave.employee.lastName}`.toLowerCase();
 
-      const matchSearch =
-        !q ||
-        fullName.includes(q) ||
-        leave.employee.email.toLowerCase().includes(q);
-
-      const matchStatus =
-        this.statusFilter === 'All' || leave.status === this.statusFilter;
-
-      const matchType =
-        this.typeFilter === 'All' || leave.type === this.typeFilter;
-
-      return matchSearch && matchStatus && matchType;
+      return (
+        (!q ||
+          fullName.includes(q) ||
+          leave.employee.email.toLowerCase().includes(q)) &&
+        (this.statusFilter === 'All' || leave.status === this.statusFilter) &&
+        (this.typeFilter === 'All' || leave.type === this.typeFilter)
+      );
     });
   }
 
@@ -132,8 +130,7 @@ export class LeavesComponent implements OnInit {
         this.leaves = data;
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Load leaves error:', err);
+      error: () => {
         this.errorMessage = 'Impossible de charger les congés.';
         this.isLoading = false;
       },
@@ -169,41 +166,65 @@ export class LeavesComponent implements OnInit {
     this.leaveService.approveLeave(leave.id).subscribe({
       next: () => {
         this.loadLeaves();
-        this.showToastMessage('Leave request approved.', 'success');
+        this.showToastMessage('Leave approved.', 'success');
       },
-      error: (err) => {
-        console.error('Approve leave error:', err);
-        this.showToastMessage('Impossible d’approuver la demande.', 'error');
+      error: () => {
+        this.showToastMessage('Impossible d’approuver.', 'error');
       },
     });
   }
 
   reject(leave: LeaveRequest): void {
     if (!this.canManageLeaves) return;
+  }
 
-    this.leaveService.rejectLeave(leave.id).subscribe({
+  deleteLeave(leave: LeaveRequest): void {
+    if (this.canManageLeaves) return;
+    if (leave.status !== 'Pending') return;
+
+    if (!confirm('Supprimer cette demande ?')) return;
+
+    this.leaveService.deleteLeave(leave.id).subscribe({
       next: () => {
         this.loadLeaves();
-        this.showToastMessage('Leave request rejected.', 'error');
+        this.showToastMessage('Demande supprimée.', 'success');
       },
       error: (err) => {
-        console.error('Reject leave error:', err);
-        this.showToastMessage('Impossible de rejeter la demande.', 'error');
+        this.showToastMessage(
+          err?.error?.message ?? 'Erreur suppression',
+          'error'
+        );
       },
     });
   }
 
-  statusLabel(status: LeaveStatus): string {
-    return status;
+  openEdit(leave: LeaveRequest): void {
+    if (leave.status !== 'Pending') return;
+
+    this.editingLeaveId = leave.id;
+
+    this.form = {
+      employeeName: `${leave.employee.firstName} ${leave.employee.lastName}`,
+      email: leave.employee.email,
+      departmentName: leave.employee.department?.name || '',
+      type: leave.type,
+      startDate: leave.startDate,
+      endDate: leave.endDate,
+      note: leave.note || '',
+    };
+
+    this.showModal = true;
   }
 
   openModal(): void {
+    this.resetForm();
     this.prefillEmployeeForm();
     this.showModal = true;
   }
 
   closeModal(): void {
     this.showModal = false;
+    this.editingLeaveId = null;
   }
 
   createRequest(): void {
@@ -213,21 +234,21 @@ export class LeavesComponent implements OnInit {
       !this.form.startDate ||
       !this.form.endDate
     ) {
-      this.showToastMessage('Veuillez remplir les champs obligatoires.', 'error');
+      this.showToastMessage('Champs obligatoires manquants.', 'error');
       return;
     }
 
-    const days = this.calculateDays(this.form.startDate, this.form.endDate);
+    const days = this.calculateDays(
+      this.form.startDate,
+      this.form.endDate
+    );
 
     if (days <= 0) {
-      this.showToastMessage('Les dates sont invalides.', 'error');
+      this.showToastMessage('Dates invalides.', 'error');
       return;
     }
 
     const payload: CreateLeavePayload = {
-      employeeName: this.form.employeeName.trim(),
-      email: this.form.email.trim(),
-      departmentName: this.form.departmentName.trim() || undefined,
       type: this.form.type,
       startDate: this.form.startDate,
       endDate: this.form.endDate,
@@ -236,6 +257,28 @@ export class LeavesComponent implements OnInit {
       note: this.form.note.trim() || undefined,
     };
 
+    if (this.editingLeaveId) {
+      this.leaveService.updateLeave(this.editingLeaveId, {
+        type: payload.type,
+        startDate: payload.startDate,
+        endDate: payload.endDate,
+        days: payload.days,
+        note: payload.note,
+      }).subscribe({
+        next: () => {
+          this.loadLeaves();
+          this.closeModal();
+          this.resetForm();
+          this.showToastMessage('Leave updated.', 'success');
+        },
+        error: () => {
+          this.showToastMessage('Erreur modification.', 'error');
+        },
+      });
+
+      return;
+    }
+
     this.leaveService.createLeave(payload).subscribe({
       next: () => {
         this.loadLeaves();
@@ -243,21 +286,17 @@ export class LeavesComponent implements OnInit {
         this.resetForm();
         this.prefillEmployeeForm();
         this.closeModal();
-        this.showToastMessage('Leave request created successfully.', 'success');
+        this.showToastMessage('Leave created.', 'success');
       },
-      error: (err) => {
-        console.error('Create leave error:', err);
-        this.showToastMessage('Impossible de créer la demande.', 'error');
+      error: () => {
+        this.showToastMessage('Erreur création.', 'error');
       },
     });
   }
 
   dismissToast(): void {
     this.showToast = false;
-    if (this.toastTimeout) {
-      clearTimeout(this.toastTimeout);
-      this.toastTimeout = null;
-    }
+    if (this.toastTimeout) clearTimeout(this.toastTimeout);
   }
 
   private showToastMessage(message: string, type: ToastType): void {
@@ -269,15 +308,32 @@ export class LeavesComponent implements OnInit {
 
     this.toastTimeout = setTimeout(() => {
       this.showToast = false;
-    }, 2800);
+    }, 3000);
+  }
+
+  statusLabel(status: LeaveStatus): string {
+    switch (status) {
+      case 'Pending':
+        return 'En attente';
+      case 'Approved':
+        return 'Approuvé';
+      case 'Rejected':
+        return 'Refusé';
+      default:
+        return status;
+    }
   }
 
   private prefillEmployeeForm(): void {
     const user = this.authService.getUser();
 
     if (user && this.authService.isEmployee()) {
-      this.form.employeeName = user.name;
+      const fullName =
+        `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.name;
+
+      this.form.employeeName = fullName;
       this.form.email = user.email;
+      this.form.departmentName = user.departmentName ?? '';
     }
   }
 
@@ -296,10 +352,9 @@ export class LeavesComponent implements OnInit {
   private calculateDays(startDate: string, endDate: string): number {
     if (!startDate || !endDate) return 0;
 
-    const start = new Date(startDate + 'T00:00:00');
-    const end = new Date(endDate + 'T00:00:00');
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
     if (end < start) return 0;
 
     const diff = end.getTime() - start.getTime();
