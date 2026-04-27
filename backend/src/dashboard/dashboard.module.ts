@@ -6,9 +6,17 @@ import { DashboardService } from './dashboard.service';
 import { Employee } from '../employees/employee.entity';
 import { LeaveRequest } from '../leaves/leave-request.entity';
 import { Training } from '../trainings/training.entity';
+import { EmployeeTraining } from '../trainings/employee-training.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Employee, LeaveRequest, Training])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Employee,
+      LeaveRequest,
+      Training,
+      EmployeeTraining,
+    ]),
+  ],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

@@ -4,12 +4,14 @@ import { Observable } from 'rxjs';
 
 export interface DashboardStatsResponse {
   scope: 'global' | 'team' | 'personal' | 'unknown';
+
   stats: {
     totalEmployees: number;
     pendingLeaves: number;
     trainingHours: number;
     departments: number;
   };
+
   chartMonths: string[];
   employeeTrend: number[];
 
@@ -40,6 +42,21 @@ export interface DashboardStatsResponse {
     startDate: string;
     endDate: string;
     days: number;
+  }>;
+
+  // 🔥 NOUVEAU
+  trainingSummary: {
+    total: number;
+    inProgress: number;
+    completed: number;
+  } | null;
+
+  trainingList: Array<{
+    id: number;
+    title: string;
+    progress: number;
+    status: string;
+    dueDate?: string;
   }>;
 }
 

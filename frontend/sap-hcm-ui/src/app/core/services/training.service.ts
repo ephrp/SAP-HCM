@@ -5,6 +5,11 @@ import { Observable } from 'rxjs';
 export type TrainingStatus = 'Planned' | 'Ongoing' | 'Completed';
 export type TrainingLevel = 'Beginner' | 'Intermediate' | 'Advanced';
 
+export type EmployeeTrainingStatus =
+  | 'NOT_STARTED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED';
+
 export interface Training {
   id: number;
   title: string;
@@ -14,6 +19,26 @@ export interface Training {
   level: TrainingLevel;
   status: TrainingStatus;
   startDate: string;
+}
+
+export interface TrainingAssignment {
+  id: number;
+  status: EmployeeTrainingStatus;
+  progress: number;
+  assignedAt: string;
+  completedAt?: string;
+  dueDate?: string;
+  employee: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    department?: {
+      id: number;
+      name: string;
+    } | null;
+  };
+  training: Training;
 }
 
 export interface CreateTrainingPayload {
@@ -34,6 +59,17 @@ export interface UpdateTrainingPayload {
   level?: TrainingLevel;
   status?: TrainingStatus;
   startDate?: string;
+}
+
+export interface AssignTrainingPayload {
+  employeeId: number;
+  trainingId: number;
+  dueDate?: string;
+}
+
+export interface UpdateTrainingAssignmentPayload {
+  status?: EmployeeTrainingStatus;
+  progress?: number;
 }
 
 @Injectable({
@@ -58,12 +94,41 @@ export class TrainingService {
 
   updateTraining(
     id: number,
-    payload: UpdateTrainingPayload
+    payload: UpdateTrainingPayload,
   ): Observable<Training> {
     return this.http.patch<Training>(`${this.apiUrl}/${id}`, payload);
   }
 
   deleteTraining(id: number): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
+  }
+
+  getAssignments(): Observable<TrainingAssignment[]> {
+    return this.http.get<TrainingAssignment[]>(
+      `${this.apiUrl}/assignments/all`,
+    );
+  }
+
+  assignTraining(
+    payload: AssignTrainingPayload,
+  ): Observable<TrainingAssignment> {
+    return this.http.post<TrainingAssignment>(
+      `${this.apiUrl}/assignments`,
+      payload,
+    );
+  }
+
+  getAssignableEmployees(): Observable<any[]> {
+  return this.http.get<any[]>(`${this.apiUrl}/assignable-employees`);
+}
+
+  updateAssignment(
+    id: number,
+    payload: UpdateTrainingAssignmentPayload,
+  ): Observable<TrainingAssignment> {
+    return this.http.patch<TrainingAssignment>(
+      `${this.apiUrl}/assignments/${id}`,
+      payload,
+    );
   }
 }

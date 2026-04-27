@@ -1,6 +1,5 @@
 import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { Component, Inject, OnInit, PLATFORM_ID } from '@angular/core';
-
 import { DashboardService } from '../../../../core/services/dashboard.service';
 
 type DashboardScope = 'global' | 'team' | 'personal' | 'unknown';
@@ -22,6 +21,9 @@ export class DashboardComponent implements OnInit {
     this.isBrowser = isPlatformBrowser(platformId);
   }
 
+  // =========================
+  // GLOBAL STATE
+  // =========================
   scope: DashboardScope = 'unknown';
 
   stats = {
@@ -31,47 +33,45 @@ export class DashboardComponent implements OnInit {
     departments: 0,
   };
 
-  profile: {
-    fullName: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    position: string;
-    status: 'Active' | 'Inactive';
-    departmentName: string;
-    managerName: string;
-    photoUrl?: string;
-    createdAt: string;
-  } | null = null;
+  profile: any = null;
+  leaveSummary: any = null;
+  leaveHistory: any[] = [];
 
-  leaveSummary: {
+  // 🔥 FORMATIONS
+  trainingSummary: {
     total: number;
-    pending: number;
-    approved: number;
-    rejected: number;
+    inProgress: number;
+    completed: number;
   } | null = null;
 
-  leaveHistory: Array<{
+  trainingList: Array<{
     id: number;
-    type: string;
-    status: 'Pending' | 'Approved' | 'Rejected';
-    startDate: string;
-    endDate: string;
-    days: number;
+    title: string;
+    progress: number;
+    status: string;
+    dueDate?: string;
   }> = [];
 
-  showVideo = false;
+  // UI
   isLoading = false;
   errorMessage = '';
+  showVideo = false;
 
-  employeeTrend: number[] = [0, 0, 0, 0, 0, 0];
+  // Chart
+  employeeTrend: number[] = [];
   chartMonths: string[] = [];
 
+  // =========================
+  // INIT
+  // =========================
   ngOnInit(): void {
     if (!this.isBrowser) return;
     this.refreshDashboard();
   }
 
+  // =========================
+  // LOAD DASHBOARD
+  // =========================
   refreshDashboard(): void {
     if (!this.isBrowser) return;
 
@@ -79,18 +79,25 @@ export class DashboardComponent implements OnInit {
     this.errorMessage = '';
 
     this.dashboardService.getStats().subscribe({
-      next: (response) => {
-        this.scope = response.scope;
-        this.stats = response.stats;
-        this.chartMonths = response.chartMonths;
-        this.employeeTrend = response.employeeTrend;
-        this.profile = response.profile;
-        this.leaveSummary = response.leaveSummary;
-        this.leaveHistory = response.leaveHistory;
+      next: (res) => {
+        this.scope = res.scope;
+
+        this.stats = res.stats;
+        this.profile = res.profile;
+        this.leaveSummary = res.leaveSummary;
+        this.leaveHistory = res.leaveHistory;
+
+        // 🔥 FORMATIONS
+        this.trainingSummary = res.trainingSummary;
+        this.trainingList = res.trainingList;
+
+        this.chartMonths = res.chartMonths;
+        this.employeeTrend = res.employeeTrend;
+
         this.isLoading = false;
       },
       error: (err) => {
-        console.error('Dashboard load error:', err);
+        console.error('Dashboard error:', err);
 
         this.scope = 'unknown';
         this.stats = {
@@ -99,15 +106,33 @@ export class DashboardComponent implements OnInit {
           trainingHours: 0,
           departments: 0,
         };
+
         this.profile = null;
         this.leaveSummary = null;
         this.leaveHistory = [];
+
+        this.trainingSummary = null;
+        this.trainingList = [];
+
         this.chartMonths = [];
-        this.employeeTrend = [0, 0, 0, 0, 0, 0];
-        this.errorMessage = 'Impossible de charger les données du dashboard.';
+        this.employeeTrend = [];
+
+        this.errorMessage = 'Erreur de chargement du dashboard';
         this.isLoading = false;
       },
     });
+  }
+
+  // =========================
+  // GETTERS
+  // =========================
+
+  get isPersonalDashboard(): boolean {
+    return this.scope === 'personal';
+  }
+
+  get canShowChart(): boolean {
+    return this.scope === 'global' || this.scope === 'team';
   }
 
   get dashboardTitle(): string {
@@ -118,57 +143,48 @@ export class DashboardComponent implements OnInit {
   }
 
   get dashboardSubtitle(): string {
-    if (this.scope === 'global') return 'Vue synthèse de toute l’entreprise.';
-    if (this.scope === 'team') return 'Vue synthèse des indicateurs de votre équipe.';
-    if (this.scope === 'personal') return 'Vos informations, vos congés et votre activité récente.';
-    return 'Vue synthèse des indicateurs clés.';
+    if (this.scope === 'global') return 'Vue globale de l’entreprise';
+    if (this.scope === 'team') return 'Vue de votre équipe';
+    if (this.scope === 'personal') return 'Vos informations personnelles';
+    return '';
   }
 
   get totalEmployeesLabel(): string {
-    if (this.scope === 'team') return 'Membres de l’équipe';
+    if (this.scope === 'team') return 'Équipe';
     if (this.scope === 'personal') return 'Mon profil';
-    return 'Effectif total';
+    return 'Employés';
   }
 
   get pendingLeavesLabel(): string {
-    if (this.scope === 'team') return 'Congés en attente';
-    if (this.scope === 'personal') return 'Mes congés en attente';
-    return 'Congés en attente';
+    if (this.scope === 'team') return 'Congés équipe';
+    if (this.scope === 'personal') return 'Mes congés';
+    return 'Congés';
   }
 
   get departmentsLabel(): string {
-    if (this.scope === 'team') return 'Départements couverts';
+    if (this.scope === 'team') return 'Départements';
     if (this.scope === 'personal') return 'Département';
     return 'Départements';
   }
 
-  get canShowChart(): boolean {
-    return this.scope === 'global' || this.scope === 'team';
-  }
-
-  get isPersonalDashboard(): boolean {
-    return this.scope === 'personal';
-  }
-
   get profileAvatar(): string {
-    if (this.profile?.photoUrl?.trim()) return this.profile.photoUrl;
-    if (this.profile?.email) {
-      return `https://i.pravatar.cc/150?u=${encodeURIComponent(this.profile.email)}`;
-    }
-    return 'https://i.pravatar.cc/150?u=employee';
+    if (this.profile?.photoUrl) return this.profile.photoUrl;
+    return 'https://i.pravatar.cc/150';
   }
+
+  // =========================
+  // CHART
+  // =========================
 
   get trendPercentage(): number {
     if (this.employeeTrend.length < 2) return 0;
 
-    const previous = this.employeeTrend[this.employeeTrend.length - 2];
-    const current = this.employeeTrend[this.employeeTrend.length - 1];
+    const prev = this.employeeTrend[this.employeeTrend.length - 2];
+    const curr = this.employeeTrend[this.employeeTrend.length - 1];
 
-    if (previous === 0) {
-      return current > 0 ? 100 : 0;
-    }
+    if (prev === 0) return curr > 0 ? 100 : 0;
 
-    return Math.round(((current - previous) / previous) * 100);
+    return Math.round(((curr - prev) / prev) * 100);
   }
 
   get trendLabel(): string {
@@ -189,9 +205,9 @@ export class DashboardComponent implements OnInit {
     const max = Math.max(...this.employeeTrend, 1);
 
     return this.employeeTrend
-      .map((value, index) => {
-        const x = baseX + index * stepX;
-        const y = 180 - (value / max) * 120;
+      .map((v, i) => {
+        const x = baseX + i * stepX;
+        const y = 180 - (v / max) * 120;
         return `${x} ${y}`;
       })
       .join(' L ');
@@ -201,29 +217,29 @@ export class DashboardComponent implements OnInit {
     return `M ${this.getChartPoints()} L 570 180 L 70 180 Z`;
   }
 
-  getDots(): { x: number; y: number; value: number }[] {
+  getDots() {
     const baseX = 70;
     const stepX = 100;
     const max = Math.max(...this.employeeTrend, 1);
 
-    return this.employeeTrend.map((value, index) => {
-      const x = baseX + index * stepX;
-      const y = 180 - (value / max) * 120;
-      return { x, y, value };
+    return this.employeeTrend.map((v, i) => {
+      return {
+        x: baseX + i * stepX,
+        y: 180 - (v / max) * 120,
+        value: v,
+      };
     });
   }
 
+  // =========================
+  // VIDEO
+  // =========================
+
   openVideo(): void {
     this.showVideo = true;
-    if (this.isBrowser) {
-      document.body.style.overflow = 'hidden';
-    }
   }
 
   closeVideo(): void {
     this.showVideo = false;
-    if (this.isBrowser) {
-      document.body.style.overflow = '';
-    }
   }
 }

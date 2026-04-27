@@ -11,6 +11,7 @@ import {
 import { Department } from '../departments/department.entity';
 import { User } from '../users/user.entity';
 import { LeaveRequest } from '../leaves/leave-request.entity';
+import { EmployeeTraining } from '../trainings/employee-training.entity';
 
 export type EmployeeStatus = 'Active' | 'Inactive';
 
@@ -66,4 +67,10 @@ export class Employee {
 
   @OneToMany(() => LeaveRequest, (leaveRequest) => leaveRequest.employee)
   leaveRequests!: LeaveRequest[];
+
+  @OneToMany(
+  () => EmployeeTraining,
+  (employeeTraining) => employeeTraining.employee,
+)
+employeeTrainings!: EmployeeTraining[];
 }

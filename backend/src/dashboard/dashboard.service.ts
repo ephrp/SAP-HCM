@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Employee } from '../employees/employee.entity';
 import { LeaveRequest } from '../leaves/leave-request.entity';
 import { Training } from '../trainings/training.entity';
+import { EmployeeTraining } from '../trainings/employee-training.entity';
 
 type CurrentUser = {
   userId: number;
@@ -24,6 +25,9 @@ export class DashboardService {
 
     @InjectRepository(Training)
     private readonly trainingRepo: Repository<Training>,
+
+    @InjectRepository(EmployeeTraining)
+    private readonly employeeTrainingRepo: Repository<EmployeeTraining>,
   ) {}
 
   async getStats(currentUser: CurrentUser) {
@@ -73,6 +77,8 @@ export class DashboardService {
         profile: null,
         leaveSummary: null,
         leaveHistory: [],
+        trainingSummary: null,
+        trainingList: [],
       };
     }
 
@@ -134,6 +140,8 @@ export class DashboardService {
         profile: null,
         leaveSummary: null,
         leaveHistory: [],
+        trainingSummary: null,
+        trainingList: [],
       };
     }
 
@@ -161,6 +169,16 @@ export class DashboardService {
         order: { id: 'DESC' },
       });
 
+      const employeeAssignments = await this.employeeTrainingRepo.find({
+        where: {
+          employee: {
+            id: currentUser.employeeId,
+          },
+        },
+        relations: ['training'],
+        order: { id: 'DESC' },
+      });
+
       const pendingLeaves = employeeLeaves.filter(
         (leave) => leave.status === 'Pending',
       ).length;
@@ -182,6 +200,24 @@ export class DashboardService {
         startDate: leave.startDate,
         endDate: leave.endDate,
         days: leave.days,
+      }));
+
+      const trainingSummary = {
+        total: employeeAssignments.length,
+        inProgress: employeeAssignments.filter(
+          (assignment) => assignment.status === 'IN_PROGRESS',
+        ).length,
+        completed: employeeAssignments.filter(
+          (assignment) => assignment.status === 'COMPLETED',
+        ).length,
+      };
+
+      const trainingList = employeeAssignments.slice(0, 5).map((assignment) => ({
+        id: assignment.id,
+        title: assignment.training.title,
+        progress: assignment.progress,
+        status: assignment.status,
+        dueDate: assignment.dueDate,
       }));
 
       return {
@@ -218,6 +254,8 @@ export class DashboardService {
           rejected: rejectedLeaves,
         },
         leaveHistory,
+        trainingSummary,
+        trainingList,
       };
     }
 
@@ -238,6 +276,8 @@ export class DashboardService {
       profile: null,
       leaveSummary: null,
       leaveHistory: [],
+      trainingSummary: null,
+      trainingList: [],
     };
   }
 

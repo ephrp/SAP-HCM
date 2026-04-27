@@ -1,4 +1,4 @@
-  import {
+import {
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -12,6 +12,9 @@ import { Employee } from '../employees/employee.entity';
 import { User } from '../users/user.entity';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
+import { MailService } from '../mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 type CurrentUser = {
   userId: number;
@@ -31,6 +34,10 @@ export class LeavesService {
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async findAll(currentUser: CurrentUser) {
@@ -38,6 +45,7 @@ export class LeavesService {
       return this.repo.find({
         relations: [
           'employee',
+          'employee.user',
           'employee.department',
           'employee.manager',
           'approvedByUser',
@@ -47,16 +55,13 @@ export class LeavesService {
     }
 
     if (currentUser.role === 'EMPLOYEE') {
-      if (!currentUser.employeeId) {
-        return [];
-      }
+      if (!currentUser.employeeId) return [];
 
       return this.repo.find({
-        where: {
-          employee: { id: currentUser.employeeId },
-        },
+        where: { employee: { id: currentUser.employeeId } },
         relations: [
           'employee',
+          'employee.user',
           'employee.department',
           'employee.manager',
           'approvedByUser',
@@ -66,28 +71,23 @@ export class LeavesService {
     }
 
     if (currentUser.role === 'MANAGER') {
-      if (!currentUser.employeeId) {
-        return [];
-      }
+      if (!currentUser.employeeId) return [];
 
       const manager = await this.employeeRepo.findOne({
         where: { id: currentUser.employeeId },
         relations: ['teamMembers'],
       });
 
-      if (!manager) {
-        return [];
-      }
+      if (!manager) return [];
 
       const teamIds = manager.teamMembers.map((member) => member.id);
 
-      if (teamIds.length === 0) {
-        return [];
-      }
+      if (teamIds.length === 0) return [];
 
       return this.repo
         .createQueryBuilder('leave')
         .leftJoinAndSelect('leave.employee', 'employee')
+        .leftJoinAndSelect('employee.user', 'employeeUser')
         .leftJoinAndSelect('employee.department', 'department')
         .leftJoinAndSelect('employee.manager', 'manager')
         .leftJoinAndSelect('leave.approvedByUser', 'approvedByUser')
@@ -104,6 +104,7 @@ export class LeavesService {
       where: { id },
       relations: [
         'employee',
+        'employee.user',
         'employee.department',
         'employee.manager',
         'approvedByUser',
@@ -126,7 +127,7 @@ export class LeavesService {
 
     const employee = await this.employeeRepo.findOne({
       where: { id: currentUser.employeeId },
-      relations: ['department', 'manager'],
+      relations: ['department', 'manager', 'manager.user'],
     });
 
     if (!employee) {
@@ -146,10 +147,59 @@ export class LeavesService {
       approvedByUser: undefined,
     });
 
-    return this.repo.save(leave);
+    const savedLeave = await this.repo.save(leave);
+
+    await this.auditLogsService.createLog({
+      action: 'LEAVE_CREATED',
+      actorUserId: currentUser.userId,
+      actorEmail: currentUser.email,
+      targetType: 'LeaveRequest',
+      targetId: savedLeave.id,
+      message: `Demande de congé créée par ${employee.firstName} ${employee.lastName}`,
+      metadata: {
+        employeeId: employee.id,
+        employeeEmail: employee.email,
+        leaveType: dto.type,
+        startDate: dto.startDate,
+        endDate: dto.endDate,
+        days: dto.days,
+        note: dto.note ?? null,
+      },
+    });
+
+    if (employee.manager?.user) {
+      await this.notificationsService.createNotification({
+        user: employee.manager.user,
+        title: 'Nouvelle demande de congé',
+        message: `${employee.firstName} ${employee.lastName} a soumis une demande de congé du ${dto.startDate} au ${dto.endDate}.`,
+        type: 'LEAVE_CREATED',
+      });
+    }
+
+    if (employee.manager?.email) {
+      try {
+        await this.mailService.sendLeaveCreatedToManagerEmail({
+          to: employee.manager.email,
+          managerFirstName: employee.manager.firstName,
+          employeeFullName: `${employee.firstName} ${employee.lastName}`,
+          leaveType: dto.type,
+          startDate: dto.startDate,
+          endDate: dto.endDate,
+          days: dto.days,
+          note: dto.note,
+        });
+      } catch (error) {
+        console.error(
+          'Erreur envoi email nouvelle demande de congé au manager :',
+          error,
+        );
+      }
+    }
+
+    return savedLeave;
   }
 
-  async update(id: number, dto: UpdateLeaveDto, currentUser?: CurrentUser) {
+  async update(id: number, dto: UpdateLeaveDto, currentUser: CurrentUser) {
     const leave = await this.findOne(id);
 
     const isApprovalAction =
@@ -170,10 +220,6 @@ export class LeavesService {
       dto.note === undefined;
 
     if (isApprovalAction || isRejectionAction) {
-      if (!currentUser) {
-        throw new ForbiddenException('User context is required');
-      }
-
       if (currentUser.role !== 'MANAGER' && currentUser.role !== 'HR_ADMIN') {
         throw new ForbiddenException(
           'Only managers and HR admins can process leave requests',
@@ -187,7 +233,10 @@ export class LeavesService {
           );
         }
 
-        if (!leave.employee.manager || leave.employee.manager.id !== currentUser.employeeId) {
+        if (
+          !leave.employee.manager ||
+          leave.employee.manager.id !== currentUser.employeeId
+        ) {
           throw new ForbiddenException(
             'You can only process leave requests for your own team members',
           );
@@ -200,15 +249,55 @@ export class LeavesService {
       leave.rejectionReason = undefined;
       leave.processedAt = new Date();
 
-      if (currentUser?.userId) {
-        const decisionUser = await this.userRepo.findOne({
-          where: { id: currentUser.userId },
-        });
+      const decisionUser = await this.userRepo.findOne({
+        where: { id: currentUser.userId },
+      });
 
-        leave.approvedByUser = decisionUser ?? undefined;
+      leave.approvedByUser = decisionUser ?? undefined;
+
+      const savedLeave = await this.repo.save(leave);
+
+      await this.auditLogsService.createLog({
+        action: 'LEAVE_APPROVED',
+        actorUserId: currentUser.userId,
+        actorEmail: currentUser.email,
+        targetType: 'LeaveRequest',
+        targetId: savedLeave.id,
+        message: `Congé approuvé pour ${leave.employee.firstName} ${leave.employee.lastName}`,
+        metadata: {
+          employeeId: leave.employee.id,
+          employeeEmail: leave.employee.email,
+          leaveType: leave.type,
+          startDate: leave.startDate,
+          endDate: leave.endDate,
+          days: leave.days,
+          processedAt: leave.processedAt,
+        },
+      });
+
+      if (leave.employee.user) {
+        await this.notificationsService.createNotification({
+          user: leave.employee.user,
+          title: 'Congé approuvé',
+          message: `Votre demande de congé du ${leave.startDate} au ${leave.endDate} a été approuvée.`,
+          type: 'LEAVE_APPROVED',
+        });
       }
 
-      return this.repo.save(leave);
+      try {
+        await this.mailService.sendLeaveApprovedEmail({
+          to: leave.employee.email,
+          firstName: leave.employee.firstName,
+          leaveType: leave.type,
+          startDate: leave.startDate,
+          endDate: leave.endDate,
+          days: leave.days,
+        });
+      } catch (error) {
+        console.error('Erreur envoi email congé approuvé :', error);
+      }
+
+      return savedLeave;
     }
 
     if (isRejectionAction) {
@@ -224,22 +313,64 @@ export class LeavesService {
       leave.rejectionReason = reason;
       leave.processedAt = new Date();
 
-      if (currentUser?.userId) {
-        const decisionUser = await this.userRepo.findOne({
-          where: { id: currentUser.userId },
-        });
+      const decisionUser = await this.userRepo.findOne({
+        where: { id: currentUser.userId },
+      });
 
-        leave.approvedByUser = decisionUser ?? undefined;
+      leave.approvedByUser = decisionUser ?? undefined;
+
+      const savedLeave = await this.repo.save(leave);
+
+      await this.auditLogsService.createLog({
+        action: 'LEAVE_REJECTED',
+        actorUserId: currentUser.userId,
+        actorEmail: currentUser.email,
+        targetType: 'LeaveRequest',
+        targetId: savedLeave.id,
+        message: `Congé refusé pour ${leave.employee.firstName} ${leave.employee.lastName}`,
+        metadata: {
+          employeeId: leave.employee.id,
+          employeeEmail: leave.employee.email,
+          leaveType: leave.type,
+          startDate: leave.startDate,
+          endDate: leave.endDate,
+          days: leave.days,
+          rejectionReason: reason,
+          processedAt: leave.processedAt,
+        },
+      });
+
+      if (leave.employee.user) {
+        await this.notificationsService.createNotification({
+          user: leave.employee.user,
+          title: 'Congé refusé',
+          message: `Votre demande de congé du ${leave.startDate} au ${leave.endDate} a été refusée. Motif : ${reason}`,
+          type: 'LEAVE_REJECTED',
+        });
       }
 
-      return this.repo.save(leave);
+      try {
+        await this.mailService.sendLeaveRejectedEmail({
+          to: leave.employee.email,
+          firstName: leave.employee.firstName,
+          leaveType: leave.type,
+          startDate: leave.startDate,
+          endDate: leave.endDate,
+          days: leave.days,
+          rejectionReason: reason,
+        });
+      } catch (error) {
+        console.error('Erreur envoi email congé refusé :', error);
+      }
+
+      return savedLeave;
     }
 
     if (leave.status !== 'Pending') {
       throw new BadRequestException('Only pending leaves can be edited');
     }
 
-    if (currentUser?.role === 'EMPLOYEE') {
+    if (currentUser.role === 'EMPLOYEE') {
       if (currentUser.employeeId !== leave.employee.id) {
         throw new ForbiddenException(
           'You can only edit your own leave requests',

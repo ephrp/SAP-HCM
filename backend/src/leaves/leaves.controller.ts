@@ -13,8 +13,6 @@ import { LeavesService } from './leaves.service';
 import { CreateLeaveDto } from './dto/create-leave.dto';
 import { UpdateLeaveDto } from './dto/update-leave.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
 
 @Controller('leaves')
 @UseGuards(JwtAuthGuard)
@@ -37,9 +35,11 @@ export class LeavesController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
-  @Roles('MANAGER', 'HR_ADMIN', 'EMPLOYEE')
-  update(@Param('id') id: string, @Body() dto: UpdateLeaveDto, @Req() req: any) {
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateLeaveDto,
+    @Req() req: any,
+  ) {
     return this.leavesService.update(Number(id), dto, req.user);
   }
 

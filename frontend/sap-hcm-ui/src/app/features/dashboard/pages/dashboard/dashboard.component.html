@@ -7,17 +7,34 @@
 
     <div class="dash__actions">
       <button class="btn btn--ghost" type="button">Exporter</button>
-      <button class="btn btn--ghost" type="button" (click)="openVideo()">Voir la démo</button>
-      <button class="btn" type="button" (click)="refreshDashboard()">Actualiser</button>
+      <button class="btn btn--ghost" type="button" (click)="openVideo()">
+        Voir la démo
+      </button>
+      <button class="btn" type="button" (click)="refreshDashboard()">
+        Actualiser
+      </button>
     </div>
   </div>
 
+  <p *ngIf="errorMessage" class="error-banner">
+    {{ errorMessage }}
+  </p>
+
+  <!-- ========================= -->
+  <!-- KPIs -->
+  <!-- ========================= -->
   <div class="kpis">
     <article class="card">
       <p class="card__label">{{ totalEmployeesLabel }}</p>
       <p class="card__value kpi-pop">{{ stats.totalEmployees }}</p>
       <p class="card__hint">
-        {{ scope === 'team' ? 'Employés actifs de votre équipe' : scope === 'personal' ? 'Profil rattaché à votre compte' : 'Employés actifs' }}
+        {{
+          scope === 'team'
+            ? 'Employés actifs de votre équipe'
+            : scope === 'personal'
+            ? 'Profil rattaché à votre compte'
+            : 'Employés actifs'
+        }}
       </p>
     </article>
 
@@ -25,7 +42,13 @@
       <p class="card__label">{{ pendingLeavesLabel }}</p>
       <p class="card__value kpi-pop">{{ stats.pendingLeaves }}</p>
       <p class="card__hint">
-        {{ scope === 'team' ? 'Demandes de votre équipe à valider' : scope === 'personal' ? 'Demandes en attente' : 'Demandes à valider' }}
+        {{
+          scope === 'team'
+            ? 'Demandes de votre équipe à valider'
+            : scope === 'personal'
+            ? 'Demandes en attente'
+            : 'Demandes à valider'
+        }}
       </p>
     </article>
 
@@ -54,12 +77,19 @@
     </article>
   </div>
 
+  <!-- ========================= -->
+  <!-- GLOBAL / MANAGER CHART -->
+  <!-- ========================= -->
   <div class="grid" *ngIf="canShowChart">
     <article class="panel chart">
       <div class="chart__head">
         <div>
           <h2>
-            {{ scope === 'team' ? "Évolution de l’effectif de l’équipe" : "Évolution de l’effectif" }}
+            {{
+              scope === 'team'
+                ? "Évolution de l’effectif de l’équipe"
+                : "Évolution de l’effectif"
+            }}
           </h2>
           <p class="muted">
             {{ chartMonths[0] }} → {{ chartMonths[chartMonths.length - 1] }}
@@ -126,125 +156,175 @@
     </article>
   </div>
 
-  <div class="grid" *ngIf="isPersonalDashboard && profile">
-    <article class="panel profile-card">
-      <div class="profile-card__top">
-        <img
-          class="profile-card__avatar"
-          [src]="profileAvatar"
-          [alt]="profile.fullName"
-        />
+  <!-- ========================= -->
+  <!-- PERSONAL DASHBOARD -->
+  <!-- ========================= -->
+  <ng-container *ngIf="isPersonalDashboard && profile">
+    <!-- Ligne 1 -->
+    <div class="personal-grid personal-grid--full">
+      <article class="panel profile-card">
+        <div class="profile-card__top">
+          <img
+            class="profile-card__avatar"
+            [src]="profileAvatar"
+            [alt]="profile.fullName"
+          />
 
-        <div>
-          <h2>{{ profile.fullName }}</h2>
-          <p class="muted">{{ profile.position }}</p>
-        </div>
-      </div>
-
-      <div class="profile-card__meta">
-        <div class="meta-item">
-          <span class="meta-item__label">Email</span>
-          <span class="meta-item__value">{{ profile.email }}</span>
-        </div>
-
-        <div class="meta-item">
-          <span class="meta-item__label">Département</span>
-          <span class="meta-item__value">{{ profile.departmentName }}</span>
+          <div>
+            <h2>{{ profile.fullName }}</h2>
+            <p class="muted">{{ profile.position }}</p>
+          </div>
         </div>
 
-        <div class="meta-item">
-          <span class="meta-item__label">Manager</span>
-          <span class="meta-item__value">{{ profile.managerName }}</span>
-        </div>
-
-        <div class="meta-item">
-          <span class="meta-item__label">Statut</span>
-          <span class="meta-item__value">{{ profile.status }}</span>
-        </div>
-
-        <div class="meta-item">
-          <span class="meta-item__label">Profil créé le</span>
-          <span class="meta-item__value">{{ profile.createdAt | date:'mediumDate' }}</span>
-        </div>
-      </div>
-    </article>
-
-    <article class="panel personal-summary" *ngIf="leaveSummary">
-      <div class="panel__header">
-        <div>
-          <h2>Mes statistiques</h2>
-          <p class="muted">Résumé rapide de votre activité.</p>
-        </div>
-      </div>
-
-      <div class="personal-summary__grid">
-        <div class="mini-card">
-          <span class="mini-card__label">Total demandes</span>
-          <span class="mini-card__value">{{ leaveSummary.total }}</span>
-        </div>
-
-        <div class="mini-card">
-          <span class="mini-card__label">En attente</span>
-          <span class="mini-card__value">{{ leaveSummary.pending }}</span>
-        </div>
-
-        <div class="mini-card">
-          <span class="mini-card__label">Approuvées</span>
-          <span class="mini-card__value">{{ leaveSummary.approved }}</span>
-        </div>
-
-        <div class="mini-card">
-          <span class="mini-card__label">Rejetées</span>
-          <span class="mini-card__value">{{ leaveSummary.rejected }}</span>
-        </div>
-      </div>
-    </article>
-
-    <article class="panel history-panel">
-      <div class="panel__header">
-        <div>
-          <h2>Historique récent</h2>
-          <p class="muted">Vos 5 dernières demandes de congé.</p>
-        </div>
-      </div>
-
-      <div class="history-list" *ngIf="leaveHistory.length > 0; else noHistory">
-        <div class="history-item" *ngFor="let item of leaveHistory">
-          <div class="history-item__left">
-            <div class="history-item__title">
-              {{ item.type }} • {{ item.days }} jour(s)
-            </div>
-            <div class="history-item__sub muted">
-              {{ item.startDate }} → {{ item.endDate }}
-            </div>
+        <div class="profile-card__meta">
+          <div class="meta-item">
+            <span class="meta-item__label">Email</span>
+            <span class="meta-item__value">{{ profile.email }}</span>
           </div>
 
-          <div class="history-item__right">
-            <span
-              class="chip"
-              [class.chip--up]="item.status === 'Approved'"
-              [class.chip--down]="item.status === 'Rejected'"
-              [class.chip--stable]="item.status === 'Pending'"
-            >
-              {{ item.status }}
+          <div class="meta-item">
+            <span class="meta-item__label">Département</span>
+            <span class="meta-item__value">{{ profile.departmentName }}</span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-item__label">Manager</span>
+            <span class="meta-item__value">{{ profile.managerName }}</span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-item__label">Statut</span>
+            <span class="meta-item__value">{{ profile.status }}</span>
+          </div>
+
+          <div class="meta-item">
+            <span class="meta-item__label">Profil créé le</span>
+            <span class="meta-item__value">
+              {{ profile.createdAt | date:'mediumDate' }}
             </span>
           </div>
         </div>
-      </div>
+      </article>
 
-      <ng-template #noHistory>
-        <p class="muted">Aucune demande récente.</p>
-      </ng-template>
-    </article>
-  </div>
+      
+    </div>
 
+    <!-- Ligne 2 -->
+    <div class="personal-grid personal-grid--bottom">
+      <article class="panel personal-summary" *ngIf="trainingSummary">
+        <div class="panel__header">
+          <div>
+            <h2>Mes formations</h2>
+            <p class="muted">Suivi de votre progression.</p>
+          </div>
+        </div>
+
+        <div class="personal-summary__grid">
+          <div class="mini-card">
+            <span class="mini-card__label">Total</span>
+            <span class="mini-card__value">{{ trainingSummary.total }}</span>
+          </div>
+
+          <div class="mini-card">
+            <span class="mini-card__label">En cours</span>
+            <span class="mini-card__value">{{ trainingSummary.inProgress }}</span>
+          </div>
+
+          <div class="mini-card">
+            <span class="mini-card__label">Terminées</span>
+            <span class="mini-card__value">{{ trainingSummary.completed }}</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel history-panel">
+        <div class="panel__header">
+          <div>
+            <h2>Historique récent</h2>
+            <p class="muted">Vos 5 dernières demandes de congé.</p>
+          </div>
+        </div>
+
+        <div class="history-list" *ngIf="leaveHistory.length > 0; else noHistory">
+          <div class="history-item" *ngFor="let item of leaveHistory">
+            <div class="history-item__left">
+              <div class="history-item__title">
+                {{ item.type }} • {{ item.days }} jour(s)
+              </div>
+              <div class="history-item__sub muted">
+                {{ item.startDate }} → {{ item.endDate }}
+              </div>
+            </div>
+
+            <div class="history-item__right">
+              <span
+                class="chip"
+                [class.chip--up]="item.status === 'Approved'"
+                [class.chip--down]="item.status === 'Rejected'"
+                [class.chip--stable]="item.status === 'Pending'"
+              >
+                {{ item.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #noHistory>
+          <p class="muted">Aucune demande récente.</p>
+        </ng-template>
+      </article>
+    </div>
+
+    <!-- Ligne 3 -->
+    <div class="personal-grid personal-grid--full" *ngIf="trainingList.length > 0">
+      <article class="panel training-history-panel">
+        <div class="panel__header">
+          <div>
+            <h2>Mes formations récentes</h2>
+            <p class="muted">Progression et échéances.</p>
+          </div>
+        </div>
+
+        <div class="history-list">
+          <div class="history-item" *ngFor="let t of trainingList">
+            <div class="history-item__left">
+              <div class="history-item__title">{{ t.title }}</div>
+
+              <div class="history-item__sub muted">
+                {{ t.progress }}% • {{ t.status }}
+              </div>
+
+              <div class="history-item__sub muted" *ngIf="t.dueDate">
+                Échéance : {{ t.dueDate }}
+              </div>
+            </div>
+
+            <div class="history-item__right training-progress">
+              <div class="training-progress__bar">
+                <div
+                  class="training-progress__fill"
+                  [style.width.%]="t.progress"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </ng-container>
+
+  <!-- ========================= -->
+  <!-- VIDEO -->
+  <!-- ========================= -->
   <div class="video">
     <div class="video__header">
       <div>
         <h2>Demo / Présentation</h2>
         <p class="muted">Une courte vidéo pour expliquer le produit (MVP).</p>
       </div>
-      <button class="btn btn--ghost" type="button" (click)="openVideo()">Plein écran</button>
+      <button class="btn btn--ghost" type="button" (click)="openVideo()">
+        Plein écran
+      </button>
     </div>
 
     <div class="video__frame">

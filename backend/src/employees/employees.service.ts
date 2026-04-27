@@ -12,6 +12,8 @@ import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { UsersService } from '../users/users.service';
 import type { UserRole } from '../users/user.entity';
+import { MailService } from '../mail/mail.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 @Injectable()
 export class EmployeesService {
@@ -23,6 +25,8 @@ export class EmployeesService {
     private readonly departmentRepo: Repository<Department>,
 
     private readonly usersService: UsersService,
+    private readonly mailService: MailService,
+    private readonly auditLogsService: AuditLogsService, // 🔥 AJOUT
   ) {}
 
   findAll() {
@@ -76,7 +80,10 @@ export class EmployeesService {
         throw new BadRequestException('Manager not found');
       }
 
-      if (manager.user?.role !== 'MANAGER' && manager.user?.role !== 'HR_ADMIN') {
+      if (
+        manager.user?.role !== 'MANAGER' &&
+        manager.user?.role !== 'HR_ADMIN'
+      ) {
         throw new BadRequestException(
           'Selected employee cannot be assigned as manager',
         );
@@ -95,6 +102,22 @@ export class EmployeesService {
     });
 
     const savedEmployee = await this.repo.save(employee);
+
+    // 🔥 AUDIT : EMPLOYEE CREATED
+    await this.auditLogsService.createLog({
+      action: 'EMPLOYEE_CREATED',
+      actorUserId: null,
+      actorEmail: null,
+      targetType: 'Employee',
+      targetId: savedEmployee.id,
+      message: `Employé créé : ${savedEmployee.firstName} ${savedEmployee.lastName}`,
+      metadata: {
+        email: savedEmployee.email,
+        position: savedEmployee.position,
+        departmentName: dto.departmentName ?? null,
+        managerId: dto.managerId ?? null,
+      },
+    });
 
     if (!dto.createAccount) {
       return {
@@ -121,6 +144,31 @@ export class EmployeesService {
       employee: savedEmployee,
       mustChangePassword: true,
     });
+
+    // 🔥 AUDIT : ACCOUNT CREATED
+    await this.auditLogsService.createLog({
+      action: 'ACCOUNT_CREATED',
+      actorUserId: null,
+      actorEmail: null,
+      targetType: 'User',
+      targetId: user.id,
+      message: `Compte utilisateur créé pour ${dto.email}`,
+      metadata: {
+        role,
+        employeeId: savedEmployee.id,
+      },
+    });
+
+    try {
+      await this.mailService.sendAccountCreationEmail({
+        to: dto.email,
+        firstName: dto.firstName,
+        role,
+        temporaryPassword,
+      });
+    } catch (error) {
+      console.error('Erreur envoi email création de compte :', error);
+    }
 
     return {
       employee: {
@@ -177,7 +225,10 @@ export class EmployeesService {
           throw new BadRequestException('Manager not found');
         }
 
-        if (manager.user?.role !== 'MANAGER' && manager.user?.role !== 'HR_ADMIN') {
+        if (
+          manager.user?.role !== 'MANAGER' &&
+          manager.user?.role !== 'HR_ADMIN'
+        ) {
           throw new BadRequestException(
             'Selected employee cannot be assigned as manager',
           );
