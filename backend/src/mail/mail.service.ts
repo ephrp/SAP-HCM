@@ -296,4 +296,60 @@ Merci de vous connecter à PeopleFlow pour consulter votre progression.
       throw error;
     }
   }
+
+  async sendPasswordResetEmail(params: {
+  to: string;
+  firstName?: string | null;
+  resetLink: string;
+}) {
+  const from = process.env.MAIL_FROM;
+
+  if (!from) {
+    throw new Error('MAIL_FROM is not defined');
+  }
+
+  const msg = {
+    to: params.to,
+    from,
+    subject: 'Réinitialisation de votre mot de passe PeopleFlow',
+    text: `Bonjour ${params.firstName ?? ''},
+
+Vous avez demandé la réinitialisation de votre mot de passe.
+
+Cliquez sur ce lien pour choisir un nouveau mot de passe :
+${params.resetLink}
+
+Ce lien expire dans 15 minutes.
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
+        <h2>Réinitialisation du mot de passe</h2>
+        <p>Bonjour ${params.firstName ?? ''},</p>
+        <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+        <p>
+          <a href="${params.resetLink}" style="display:inline-block;padding:12px 16px;background:#111827;color:white;text-decoration:none;border-radius:8px;">
+            Réinitialiser mon mot de passe
+          </a>
+        </p>
+        <p>Ce lien expire dans <strong>15 minutes</strong>.</p>
+        <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+      </div>
+    `,
+  };
+
+  try {
+    await sgMail.send(msg);
+    this.logger.log(`Email de réinitialisation envoyé à ${params.to}`);
+  } catch (error) {
+    this.logger.error(
+      `Échec d’envoi reset password à ${params.to}`,
+      error instanceof Error ? error.stack : String(error),
+    );
+    throw error;
+  }
+}
+
+  
 }

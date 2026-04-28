@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuditLogsModule } from './audit-logs/audit-logs.module';
+import { WorkSchedulesModule } from './work-schedules/work-schedules.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AuditLogsModule } from './audit-logs/audit-logs.module';
     DashboardModule,
     NotificationsModule,
     AuditLogsModule,
+    WorkSchedulesModule,
   ],
 })
 export class AppModule {}

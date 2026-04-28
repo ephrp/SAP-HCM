@@ -1,51 +1,75 @@
 <section class="login">
-  <div class="login__card">
-    <div class="login__brand">
-      <span class="dot"></span>
-      <span class="brand">PeopleFlow</span>
-      <span class="tag">MVP</span>
+  <div class="login__shell">
+    <div class="login__intro">
+      <div class="login__brand">
+        <span class="dot"></span>
+        <span class="brand">PeopleFlow</span>
+        <span class="tag">MVP</span>
+      </div>
+
+      <h1>Bienvenue dans votre espace RH</h1>
+      <p>
+        Gérez vos congés, formations, horaires et notifications dans une
+        interface simple, sécurisée et moderne.
+      </p>
+
+      <div class="login__features">
+        <span>JWT sécurisé</span>
+        <span>Notifications RH</span>
+        <span>Audit logs</span>
+      </div>
     </div>
 
-    <div class="login__header">
-      <h1>Connexion</h1>
-      <p>Authentification réelle avec JWT.</p>
-    </div>
+    <div class="login__card">
+      <div class="login__header">
+        <h2>Connexion</h2>
+        <p>Connectez-vous à votre espace PeopleFlow.</p>
+      </div>
 
-    <div class="form">
-      <label class="field">
-        <span class="field__label">Email</span>
-        <input
-          class="field__control"
-          type="email"
-          [(ngModel)]="email"
-          placeholder="ex: admin@test.com"
-        />
-      </label>
+      <div class="form">
+        <label class="field">
+          <span class="field__label">Email</span>
+          <input
+            class="field__control"
+            type="email"
+            [(ngModel)]="email"
+            placeholder="ex: admin@test.com"
+          />
+        </label>
 
-      <label class="field">
-        <span class="field__label">Password</span>
-        <input
-          class="field__control"
-          type="password"
-          [(ngModel)]="password"
-          placeholder="••••••••"
-        />
-      </label>
+        <label class="field">
+          <span class="field__label">Mot de passe</span>
+          <input
+            class="field__control"
+            type="password"
+            [(ngModel)]="password"
+            placeholder="••••••••"
+          />
+        </label>
 
-      <p class="error" *ngIf="error">{{ error }}</p>
+        <div class="login__options">
+          <span></span>
 
-      <button
-        class="btn btn--primary"
-        type="button"
-        (click)="submit()"
-        [disabled]="isSubmitting"
-      >
-        {{ isSubmitting ? 'Connexion...' : 'Login' }}
-      </button>
-    </div>
+          <a routerLink="/forgot-password" class="forgot-link">
+            Mot de passe oublié ?
+          </a>
+        </div>
 
-    <div class="login__hint">
-      <p>Exemple : admin@test.com / 123456</p>
+        <p class="error" *ngIf="error">{{ error }}</p>
+
+        <button
+          class="btn btn--primary"
+          type="button"
+          (click)="submit()"
+          [disabled]="isSubmitting"
+        >
+          {{ isSubmitting ? 'Connexion...' : 'Se connecter' }}
+        </button>
+      </div>
+
+      <div class="login__hint">
+        <p>Exemple : admin@test.com / 123456</p>
+      </div>
     </div>
   </div>
 </section>

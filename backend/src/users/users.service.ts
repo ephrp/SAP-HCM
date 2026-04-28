@@ -88,4 +88,29 @@ export class UsersService {
 
     return this.repo.save(user);
   }
+
+  async savePasswordResetToken(userId: number, tokenHash: string, expiresAt: Date) {
+  const user = await this.findOne(userId);
+
+  user.resetPasswordTokenHash = tokenHash;
+  user.resetPasswordExpiresAt = expiresAt;
+
+  return this.repo.save(user);
+}
+
+async findByResetTokenHash(tokenHash: string) {
+  return this.repo.findOne({
+    where: { resetPasswordTokenHash: tokenHash },
+    relations: ['employee'],
+  });
+}
+
+async clearPasswordResetToken(userId: number) {
+  const user = await this.findOne(userId);
+
+  user.resetPasswordTokenHash = null;
+  user.resetPasswordExpiresAt = null;
+
+  return this.repo.save(user);
+}
 }

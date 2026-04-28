@@ -1,0 +1,126 @@
+<section class="schedule-page">
+  <div class="schedule-header">
+    <div>
+      <p class="eyebrow">Planning RH</p>
+      <h1>Horaires de travail</h1>
+      <p>Gérez la semaine type de travail.</p>
+    </div>
+
+    <button
+  *ngIf="canEditSchedule"
+  class="primary-btn"
+  type="button"
+  (click)="saveAll()"
+  [disabled]="isSaving"
+>
+  {{ isSaving ? 'Sauvegarde...' : 'Sauvegarder tout' }}
+</button>
+  </div>
+
+  <div class="employee-selector" *ngIf="canSelectEmployee">
+  <div>
+    <span>Employé sélectionné</span>
+    <strong>{{ selectedEmployeeLabel }}</strong>
+  </div>
+
+  <select
+    [(ngModel)]="employeeId"
+    (change)="onEmployeeChange()"
+    [disabled]="isLoadingEmployees"
+  >
+    <option *ngFor="let employee of employees" [value]="employee.id">
+      {{ employee.firstName }} {{ employee.lastName }} — {{ employee.email }}
+    </option>
+  </select>
+</div>
+
+  <div class="stats">
+    <article class="stat-card">
+      <span>Jours travaillés</span>
+      <strong>{{ workingDaysCount }}</strong>
+    </article>
+
+    <article class="stat-card">
+      <span>Total semaine</span>
+      <strong>{{ weeklyHours | number:'1.0-1' }}h</strong>
+    </article>
+
+    <article class="stat-card">
+      <span>Employé</span>
+      <strong>#{{ employeeId }}</strong>
+    </article>
+  </div>
+
+  <div class="alert error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <div class="alert success" *ngIf="successMessage">
+    {{ successMessage }}
+  </div>
+
+  <div class="schedule-card">
+    <div class="schedule-card__header">
+      <div>
+        <h2>Semaine type</h2>
+        <p>Lundi à dimanche, horaires standards.</p>
+      </div>
+    </div>
+
+    <div class="schedule-table">
+      <div class="schedule-row schedule-row--head">
+        <span>Jour</span>
+        <span>Travaillé</span>
+        <span>Début</span>
+        <span>Fin</span>
+        <span>Pause</span>
+        <span>Action</span>
+      </div>
+
+      <div class="schedule-row" *ngFor="let row of rows">
+        <div class="day-cell">
+          <strong>{{ row.label }}</strong>
+          <small>Jour {{ row.dayOfWeek }}</small>
+        </div>
+
+        <label class="switch">
+          <input type="checkbox" [(ngModel)]="row.isWorkingDay" />
+          <span></span>
+        </label>
+
+        <input
+          class="time-input"
+          type="time"
+          [(ngModel)]="row.startTime"
+         [disabled]="!row.isWorkingDay || !canEditSchedule"
+        />
+
+        <input
+          class="time-input"
+          type="time"
+          [(ngModel)]="row.endTime"
+          [disabled]="!row.isWorkingDay || !canEditSchedule"
+        />
+
+        <div class="pause-field">
+          <input
+            type="number"
+            min="0"
+            [(ngModel)]="row.breakMinutes"
+            [disabled]="!row.isWorkingDay || !canEditSchedule"
+          />
+          <span>min</span>
+        </div>
+
+       <button
+  *ngIf="canEditSchedule"
+  class="save-btn"
+  type="button"
+  (click)="saveRow(row)"
+>
+  Sauver
+</button>
+      </div>
+    </div>
+  </div>
+</section>

@@ -12,7 +12,11 @@ export type AuditAction =
   | 'LEAVE_APPROVED'
   | 'LEAVE_REJECTED'
   | 'TRAINING_CREATED'
-  | 'TRAINING_ASSIGNED';
+  | 'TRAINING_ASSIGNED'
+  | 'WORK_SCHEDULE_UPDATED'
+  | 'WORK_SCHEDULE_CREATED';
+ 
+
 
 @Entity('audit_logs')
 export class AuditLog {

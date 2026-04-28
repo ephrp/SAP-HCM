@@ -28,6 +28,28 @@ export const routes: Routes = [
       ),
   },
 
+  {
+  path: 'reset-password',
+  loadComponent: () =>
+    import('./features/reset-password/reset-password.component').then(
+      (m) => m.ResetPasswordComponent,
+    ),
+},
+
+{
+  path: 'forgot-password',
+  loadComponent: () =>
+    import('./features/forgot-password/forgot-password.component').then(
+      (m) => m.ForgotPasswordComponent,
+    ),
+},
+
+  {
+  path: 'audit-logs',
+  loadComponent: () =>
+    import('./features/audit/audit.component').then((m) => m.AuditComponent),
+},
+
   // 🔹 APP (avec shell)
   {
     path: '',
@@ -44,6 +66,14 @@ export const routes: Routes = [
             (m) => m.DashboardComponent
           ),
       },
+
+      {
+  path: 'work-schedules',
+  loadComponent: () =>
+    import('./features/work-schedules/work-schedules.component').then(
+      (m) => m.WorkSchedulesComponent
+    ),
+},
       {
         path: 'employees',
         canActivate: [roleGuard(['HR_ADMIN'])],

@@ -112,6 +112,19 @@ export class AuthService {
     return this.getUser()?.mustChangePassword ?? false;
   }
 
+  resetPassword(token: string, newPassword: string) {
+  return this.http.post('http://localhost:3000/auth/reset-password', {
+    token,
+    newPassword,
+  });
+}
+
+forgotPassword(email: string) {
+  return this.http.post('http://localhost:3000/auth/forgot-password', {
+    email,
+  });
+}
+
   getToken(): string | null {
     if (!this.isBrowser) return null;
     return localStorage.getItem(this.tokenStorageKey);

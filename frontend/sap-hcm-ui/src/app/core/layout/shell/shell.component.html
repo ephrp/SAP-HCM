@@ -2,16 +2,15 @@
   <div class="topbar__inner">
     <div class="brand">
       <span class="brand__dot"></span>
-      <span class="brand__name">PeopleFlow</span>
-      <span class="brand__tag">MVP</span>
+
+      <div class="brand__text">
+        <span class="brand__name">PeopleFlow</span>
+        <span class="brand__tag">MVP</span>
+      </div>
     </div>
 
     <nav class="nav">
-      <a
-        routerLink="/dashboard"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-      >
+      <a routerLink="/dashboard" routerLinkActive="active">
         Dashboard
       </a>
 
@@ -39,15 +38,28 @@
         Approvals
       </a>
 
+      <a routerLink="/trainings" routerLinkActive="active">
+        Trainings
+      </a>
+
+      <a routerLink="/work-schedules" routerLinkActive="active">
+        Horaires
+      </a>
+
       <a
-        routerLink="/trainings"
+        *ngIf="authService.isHrAdmin()"
+        routerLink="/audit-logs"
         routerLinkActive="active"
       >
-        Trainings
+        Audit
       </a>
     </nav>
 
     <div class="userbox" *ngIf="user">
+      <div class="avatar">
+        {{ user.name.charAt(0) }}
+      </div>
+
       <div class="userbox__meta">
         <span class="userbox__name">{{ user.name }}</span>
         <span class="userbox__role">{{ user.role }}</span>

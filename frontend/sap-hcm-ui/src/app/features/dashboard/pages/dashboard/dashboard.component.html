@@ -1,16 +1,17 @@
 <section class="dash">
-  <div class="dash__header">
+  <div class="hero">
     <div>
+      <p class="eyebrow">PeopleFlow Dashboard</p>
       <h1>{{ dashboardTitle }}</h1>
       <p>{{ dashboardSubtitle }}</p>
     </div>
 
-    <div class="dash__actions">
-      <button class="btn btn--ghost" type="button">Exporter</button>
-      <button class="btn btn--ghost" type="button" (click)="openVideo()">
+    <div class="hero__actions">
+      <button class="btn btn--soft" type="button">Exporter</button>
+      <button class="btn btn--soft" type="button" (click)="openVideo()">
         Voir la démo
       </button>
-      <button class="btn" type="button" (click)="refreshDashboard()">
+      <button class="btn btn--primary" type="button" (click)="refreshDashboard()">
         Actualiser
       </button>
     </div>
@@ -20,14 +21,11 @@
     {{ errorMessage }}
   </p>
 
-  <!-- ========================= -->
-  <!-- KPIs -->
-  <!-- ========================= -->
   <div class="kpis">
-    <article class="card">
-      <p class="card__label">{{ totalEmployeesLabel }}</p>
-      <p class="card__value kpi-pop">{{ stats.totalEmployees }}</p>
-      <p class="card__hint">
+    <article class="kpi-card">
+      <span>{{ totalEmployeesLabel }}</span>
+      <strong>{{ stats.totalEmployees }}</strong>
+      <p>
         {{
           scope === 'team'
             ? 'Employés actifs de votre équipe'
@@ -38,10 +36,10 @@
       </p>
     </article>
 
-    <article class="card">
-      <p class="card__label">{{ pendingLeavesLabel }}</p>
-      <p class="card__value kpi-pop">{{ stats.pendingLeaves }}</p>
-      <p class="card__hint">
+    <article class="kpi-card">
+      <span>{{ pendingLeavesLabel }}</span>
+      <strong>{{ stats.pendingLeaves }}</strong>
+      <p>
         {{
           scope === 'team'
             ? 'Demandes de votre équipe à valider'
@@ -52,116 +50,107 @@
       </p>
     </article>
 
-    <article class="card" *ngIf="!isPersonalDashboard">
-      <p class="card__label">Heures de formation</p>
-      <p class="card__value kpi-pop">{{ stats.trainingHours }}</p>
-      <p class="card__hint">Total (période)</p>
+    <article class="kpi-card" *ngIf="!isPersonalDashboard">
+      <span>Heures de formation</span>
+      <strong>{{ stats.trainingHours }}</strong>
+      <p>Total période</p>
     </article>
 
-    <article class="card" *ngIf="!isPersonalDashboard">
-      <p class="card__label">{{ departmentsLabel }}</p>
-      <p class="card__value kpi-pop">{{ stats.departments }}</p>
-      <p class="card__hint">Répartition interne</p>
+    <article class="kpi-card" *ngIf="!isPersonalDashboard">
+      <span>{{ departmentsLabel }}</span>
+      <strong>{{ stats.departments }}</strong>
+      <p>Répartition interne</p>
     </article>
 
-    <article class="card" *ngIf="isPersonalDashboard && leaveSummary">
-      <p class="card__label">Mes congés approuvés</p>
-      <p class="card__value kpi-pop">{{ leaveSummary.approved }}</p>
-      <p class="card__hint">Demandes validées</p>
+    <article class="kpi-card" *ngIf="isPersonalDashboard && leaveSummary">
+      <span>Mes congés approuvés</span>
+      <strong>{{ leaveSummary.approved }}</strong>
+      <p>Demandes validées</p>
     </article>
 
-    <article class="card" *ngIf="isPersonalDashboard && leaveSummary">
-      <p class="card__label">Mes congés rejetés</p>
-      <p class="card__value kpi-pop">{{ leaveSummary.rejected }}</p>
-      <p class="card__hint">Demandes refusées</p>
-    </article>
-  </div>
-
-  <!-- ========================= -->
-  <!-- GLOBAL / MANAGER CHART -->
-  <!-- ========================= -->
-  <div class="grid" *ngIf="canShowChart">
-    <article class="panel chart">
-      <div class="chart__head">
-        <div>
-          <h2>
-            {{
-              scope === 'team'
-                ? "Évolution de l’effectif de l’équipe"
-                : "Évolution de l’effectif"
-            }}
-          </h2>
-          <p class="muted">
-            {{ chartMonths[0] }} → {{ chartMonths[chartMonths.length - 1] }}
-          </p>
-        </div>
-
-        <div class="chart__meta">
-          <span
-            class="chip"
-            [class.chip--up]="trendDirection === 'up'"
-            [class.chip--down]="trendDirection === 'down'"
-            [class.chip--stable]="trendDirection === 'stable'"
-          >
-            {{ trendLabel }}
-          </span>
-
-          <span class="chip chip--ghost">
-            {{
-              trendDirection === 'up'
-                ? 'Hausse'
-                : trendDirection === 'down'
-                ? 'Baisse'
-                : 'Stable'
-            }}
-          </span>
-        </div>
-      </div>
-
-      <div class="chart__wrap" aria-label="Employee chart">
-        <svg viewBox="0 0 720 220" class="chart__svg" role="img">
-          <line x1="40" y1="180" x2="690" y2="180" class="axis"></line>
-          <line x1="40" y1="30" x2="40" y2="180" class="axis"></line>
-
-          <line x1="40" y1="140" x2="690" y2="140" class="grid"></line>
-          <line x1="40" y1="100" x2="690" y2="100" class="grid"></line>
-          <line x1="40" y1="60" x2="690" y2="60" class="grid"></line>
-
-          <path class="line" [attr.d]="'M ' + getChartPoints()"></path>
-          <path class="fill" [attr.d]="getFillPath()"></path>
-
-          <circle
-            *ngFor="let dot of getDots()"
-            [attr.cx]="dot.x"
-            [attr.cy]="dot.y"
-            r="5"
-            class="dot"
-          ></circle>
-
-          <text
-            *ngFor="let month of chartMonths; let i = index"
-            [attr.x]="62 + i * 100"
-            y="205"
-            class="label"
-          >
-            {{ month }}
-          </text>
-
-          <text x="600" y="50" class="hint">
-            {{ stats.totalEmployees }}
-            {{ scope === 'team' ? 'membres' : 'employés' }}
-          </text>
-        </svg>
-      </div>
+    <article class="kpi-card" *ngIf="isPersonalDashboard && leaveSummary">
+      <span>Mes congés rejetés</span>
+      <strong>{{ leaveSummary.rejected }}</strong>
+      <p>Demandes refusées</p>
     </article>
   </div>
 
-  <!-- ========================= -->
-  <!-- PERSONAL DASHBOARD -->
-  <!-- ========================= -->
+  <article class="panel chart-panel" *ngIf="canShowChart">
+    <div class="panel__header">
+      <div>
+        <h2>
+          {{
+            scope === 'team'
+              ? "Évolution de l’effectif de l’équipe"
+              : "Évolution de l’effectif"
+          }}
+        </h2>
+        <p class="muted">
+          {{ chartMonths[0] }} → {{ chartMonths[chartMonths.length - 1] }}
+        </p>
+      </div>
+
+      <div class="chips">
+        <span
+          class="chip"
+          [class.chip--up]="trendDirection === 'up'"
+          [class.chip--down]="trendDirection === 'down'"
+          [class.chip--stable]="trendDirection === 'stable'"
+        >
+          {{ trendLabel }}
+        </span>
+
+        <span class="chip chip--ghost">
+          {{
+            trendDirection === 'up'
+              ? 'Hausse'
+              : trendDirection === 'down'
+              ? 'Baisse'
+              : 'Stable'
+          }}
+        </span>
+      </div>
+    </div>
+
+    <div class="chart__wrap">
+      <svg viewBox="0 0 720 220" class="chart__svg" role="img">
+        <line x1="40" y1="180" x2="690" y2="180" class="axis"></line>
+        <line x1="40" y1="30" x2="40" y2="180" class="axis"></line>
+
+        <line x1="40" y1="140" x2="690" y2="140" class="grid-line"></line>
+        <line x1="40" y1="100" x2="690" y2="100" class="grid-line"></line>
+        <line x1="40" y1="60" x2="690" y2="60" class="grid-line"></line>
+
+        <path class="fill" [attr.d]="getFillPath()"></path>
+        <path class="line" [attr.d]="'M ' + getChartPoints()"></path>
+
+        <circle
+          *ngFor="let dot of getDots()"
+          [attr.cx]="dot.x"
+          [attr.cy]="dot.y"
+          r="5"
+          class="dot"
+        ></circle>
+
+        <text
+          *ngFor="let month of chartMonths; let i = index"
+          [attr.x]="62 + i * 100"
+          y="205"
+          class="label"
+        >
+          {{ month }}
+        </text>
+
+        <text x="600" y="50" class="hint">
+          {{ stats.totalEmployees }}
+          {{ scope === 'team' ? 'membres' : 'employés' }}
+        </text>
+      </svg>
+    </div>
+  </article>
+
   <ng-container *ngIf="isPersonalDashboard && profile">
-    <!-- Ligne 1 -->
-    <div class="personal-grid personal-grid--full">
+    <div class="profile-grid">
       <article class="panel profile-card">
         <div class="profile-card__top">
           <img
@@ -178,40 +167,35 @@
 
         <div class="profile-card__meta">
           <div class="meta-item">
-            <span class="meta-item__label">Email</span>
-            <span class="meta-item__value">{{ profile.email }}</span>
+            <span>Email</span>
+            <strong>{{ profile.email }}</strong>
           </div>
 
           <div class="meta-item">
-            <span class="meta-item__label">Département</span>
-            <span class="meta-item__value">{{ profile.departmentName }}</span>
+            <span>Département</span>
+            <strong>{{ profile.departmentName }}</strong>
           </div>
 
           <div class="meta-item">
-            <span class="meta-item__label">Manager</span>
-            <span class="meta-item__value">{{ profile.managerName }}</span>
+            <span>Manager</span>
+            <strong>{{ profile.managerName }}</strong>
           </div>
 
           <div class="meta-item">
-            <span class="meta-item__label">Statut</span>
-            <span class="meta-item__value">{{ profile.status }}</span>
+            <span>Statut</span>
+            <strong>{{ profile.status }}</strong>
           </div>
 
           <div class="meta-item">
-            <span class="meta-item__label">Profil créé le</span>
-            <span class="meta-item__value">
-              {{ profile.createdAt | date:'mediumDate' }}
-            </span>
+            <span>Créé le</span>
+            <strong>{{ profile.createdAt | date:'mediumDate' }}</strong>
           </div>
         </div>
       </article>
-
-      
     </div>
 
-    <!-- Ligne 2 -->
-    <div class="personal-grid personal-grid--bottom">
-      <article class="panel personal-summary" *ngIf="trainingSummary">
+    <div class="two-col">
+      <article class="panel" *ngIf="trainingSummary">
         <div class="panel__header">
           <div>
             <h2>Mes formations</h2>
@@ -219,25 +203,25 @@
           </div>
         </div>
 
-        <div class="personal-summary__grid">
+        <div class="mini-grid">
           <div class="mini-card">
-            <span class="mini-card__label">Total</span>
-            <span class="mini-card__value">{{ trainingSummary.total }}</span>
+            <span>Total</span>
+            <strong>{{ trainingSummary.total }}</strong>
           </div>
 
           <div class="mini-card">
-            <span class="mini-card__label">En cours</span>
-            <span class="mini-card__value">{{ trainingSummary.inProgress }}</span>
+            <span>En cours</span>
+            <strong>{{ trainingSummary.inProgress }}</strong>
           </div>
 
           <div class="mini-card">
-            <span class="mini-card__label">Terminées</span>
-            <span class="mini-card__value">{{ trainingSummary.completed }}</span>
+            <span>Terminées</span>
+            <strong>{{ trainingSummary.completed }}</strong>
           </div>
         </div>
       </article>
 
-      <article class="panel history-panel">
+      <article class="panel">
         <div class="panel__header">
           <div>
             <h2>Historique récent</h2>
@@ -247,82 +231,62 @@
 
         <div class="history-list" *ngIf="leaveHistory.length > 0; else noHistory">
           <div class="history-item" *ngFor="let item of leaveHistory">
-            <div class="history-item__left">
-              <div class="history-item__title">
-                {{ item.type }} • {{ item.days }} jour(s)
-              </div>
-              <div class="history-item__sub muted">
-                {{ item.startDate }} → {{ item.endDate }}
-              </div>
+            <div>
+              <strong>{{ item.type }} • {{ item.days }} jour(s)</strong>
+              <p class="muted">{{ item.startDate }} → {{ item.endDate }}</p>
             </div>
 
-            <div class="history-item__right">
-              <span
-                class="chip"
-                [class.chip--up]="item.status === 'Approved'"
-                [class.chip--down]="item.status === 'Rejected'"
-                [class.chip--stable]="item.status === 'Pending'"
-              >
-                {{ item.status }}
-              </span>
-            </div>
+            <span
+              class="chip"
+              [class.chip--up]="item.status === 'Approved'"
+              [class.chip--down]="item.status === 'Rejected'"
+              [class.chip--stable]="item.status === 'Pending'"
+            >
+              {{ item.status }}
+            </span>
           </div>
         </div>
 
         <ng-template #noHistory>
-          <p class="muted">Aucune demande récente.</p>
+          <p class="empty-text">Aucune demande récente.</p>
         </ng-template>
       </article>
     </div>
 
-    <!-- Ligne 3 -->
-    <div class="personal-grid personal-grid--full" *ngIf="trainingList.length > 0">
-      <article class="panel training-history-panel">
-        <div class="panel__header">
+    <article class="panel" *ngIf="trainingList.length > 0">
+      <div class="panel__header">
+        <div>
+          <h2>Mes formations récentes</h2>
+          <p class="muted">Progression et échéances.</p>
+        </div>
+      </div>
+
+      <div class="history-list">
+        <div class="history-item" *ngFor="let t of trainingList">
           <div>
-            <h2>Mes formations récentes</h2>
-            <p class="muted">Progression et échéances.</p>
+            <strong>{{ t.title }}</strong>
+            <p class="muted">{{ t.progress }}% • {{ t.status }}</p>
+            <p class="muted" *ngIf="t.dueDate">Échéance : {{ t.dueDate }}</p>
           </div>
-        </div>
 
-        <div class="history-list">
-          <div class="history-item" *ngFor="let t of trainingList">
-            <div class="history-item__left">
-              <div class="history-item__title">{{ t.title }}</div>
-
-              <div class="history-item__sub muted">
-                {{ t.progress }}% • {{ t.status }}
-              </div>
-
-              <div class="history-item__sub muted" *ngIf="t.dueDate">
-                Échéance : {{ t.dueDate }}
-              </div>
-            </div>
-
-            <div class="history-item__right training-progress">
-              <div class="training-progress__bar">
-                <div
-                  class="training-progress__fill"
-                  [style.width.%]="t.progress"
-                ></div>
-              </div>
+          <div class="progress">
+            <div class="progress__bar">
+              <div class="progress__fill" [style.width.%]="t.progress"></div>
             </div>
           </div>
         </div>
-      </article>
-    </div>
+      </div>
+    </article>
   </ng-container>
 
-  <!-- ========================= -->
-  <!-- VIDEO -->
-  <!-- ========================= -->
-  <div class="video">
-    <div class="video__header">
+  <article class="panel video">
+    <div class="panel__header">
       <div>
         <h2>Demo / Présentation</h2>
-        <p class="muted">Une courte vidéo pour expliquer le produit (MVP).</p>
+        <p class="muted">Une courte vidéo pour expliquer le produit MVP.</p>
       </div>
-      <button class="btn btn--ghost" type="button" (click)="openVideo()">
+
+      <button class="btn btn--soft" type="button" (click)="openVideo()">
         Plein écran
       </button>
     </div>
@@ -332,7 +296,6 @@
         src="https://www.youtube.com/embed/dQw4w9WgXcQ"
         title="SAP-HCM Demo"
         frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen
       ></iframe>
 
@@ -340,7 +303,7 @@
         ▶
       </button>
     </div>
-  </div>
+  </article>
 
   <div class="modal" *ngIf="showVideo" (click)="closeVideo()">
     <div class="modal__content" (click)="$event.stopPropagation()">
@@ -354,7 +317,6 @@
           src="https://www.youtube.com/embed/dQw4w9WgXcQ"
           title="SAP-HCM Demo Fullscreen"
           frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowfullscreen
         ></iframe>
       </div>

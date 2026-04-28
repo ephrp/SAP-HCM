@@ -7,13 +7,15 @@ import { EmployeeTraining } from './employee-training.entity';
 import { Employee } from '../employees/employee.entity';
 import { MailModule } from '../mail/mail.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AuditLogsModule } from '../audit-logs/audit-logs.module';
 
 @Module({
   imports: [
-  TypeOrmModule.forFeature([Training, EmployeeTraining, Employee]),
-  MailModule,
-  NotificationsModule,
-],
+    TypeOrmModule.forFeature([Training, EmployeeTraining, Employee]),
+    MailModule,
+    NotificationsModule,
+    AuditLogsModule,
+  ],
   controllers: [TrainingsController],
   providers: [TrainingsService],
   exports: [TrainingsService],

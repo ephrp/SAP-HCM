@@ -15,6 +15,7 @@ import { AssignTrainingDto } from './dto/assign-training.dto';
 import { UpdateEmployeeTrainingDto } from './dto/update-employee-training.dto';
 import { MailService } from '../mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditLogsService } from '../audit-logs/audit-logs.service';
 
 type CurrentUser = {
   userId: number;
@@ -36,8 +37,8 @@ export class TrainingsService {
     private readonly employeeRepo: Repository<Employee>,
 
     private readonly mailService: MailService,
-
     private readonly notificationsService: NotificationsService,
+    private readonly auditLogsService: AuditLogsService,
   ) {}
 
   async findAll(currentUser: CurrentUser) {
@@ -115,7 +116,30 @@ export class TrainingsService {
           : undefined,
     });
 
-    return this.repo.save(training);
+    const savedTraining = await this.repo.save(training);
+
+    await this.auditLogsService.createLog({
+      action: 'TRAINING_CREATED',
+      actorUserId: currentUser.userId,
+      actorEmail: currentUser.email,
+      targetType: 'Training',
+      targetId: savedTraining.id,
+      message: `Formation créée : ${savedTraining.title}`,
+      metadata: {
+        title: savedTraining.title,
+        category: savedTraining.category,
+        provider: savedTraining.provider,
+        durationHours: savedTraining.durationHours,
+        level: savedTraining.level,
+        status: savedTraining.status,
+        startDate: savedTraining.startDate,
+        scope: savedTraining.scope,
+        createdByRole: savedTraining.createdByRole,
+        ownerManagerId: savedTraining.ownerManagerId ?? null,
+      },
+    });
+
+    return savedTraining;
   }
 
   async update(id: number, dto: UpdateTrainingDto, currentUser: CurrentUser) {
@@ -174,7 +198,11 @@ export class TrainingsService {
 
       const manager = await this.employeeRepo.findOne({
         where: { id: currentUser.employeeId },
-        relations: ['teamMembers', 'teamMembers.department', 'teamMembers.manager'],
+        relations: [
+          'teamMembers',
+          'teamMembers.department',
+          'teamMembers.manager',
+        ],
       });
 
       if (!manager) {
@@ -257,29 +285,45 @@ export class TrainingsService {
 
     const savedAssignment = await this.employeeTrainingRepo.save(assignment);
 
+    await this.auditLogsService.createLog({
+      action: 'TRAINING_ASSIGNED',
+      actorUserId: currentUser.userId,
+      actorEmail: currentUser.email,
+      targetType: 'EmployeeTraining',
+      targetId: savedAssignment.id,
+      message: `Formation "${training.title}" assignée à ${employee.firstName} ${employee.lastName}`,
+      metadata: {
+        employeeId: employee.id,
+        employeeEmail: employee.email,
+        trainingId: training.id,
+        trainingTitle: training.title,
+        category: training.category,
+        provider: training.provider,
+        dueDate: dto.dueDate ?? null,
+      },
+    });
+
     try {
-  await this.mailService.sendTrainingAssignedEmail({
-    to: employee.email,
-    firstName: employee.firstName,
-    trainingTitle: training.title,
-    category: training.category,
-    provider: training.provider,
-    dueDate: dto.dueDate,
-  });
-} catch (error) {
-  console.error('Erreur envoi email formation assignée :', error);
-}
+      await this.mailService.sendTrainingAssignedEmail({
+        to: employee.email,
+        firstName: employee.firstName,
+        trainingTitle: training.title,
+        category: training.category,
+        provider: training.provider,
+        dueDate: dto.dueDate,
+      });
+    } catch (error) {
+      console.error('Erreur envoi email formation assignée :', error);
+    }
 
-if (employee.user) {
-  await this.notificationsService.createNotification({
-    user: employee.user,
-    title: 'Nouvelle formation assignée',
-    message: `La formation "${training.title}" vous a été assignée.`,
-    type: 'TRAINING_ASSIGNED',
-  });
-}
-
-    
+    if (employee.user) {
+      await this.notificationsService.createNotification({
+        user: employee.user,
+        title: 'Nouvelle formation assignée',
+        message: `La formation "${training.title}" vous a été assignée.`,
+        type: 'TRAINING_ASSIGNED',
+      });
+    }
 
     return savedAssignment;
   }

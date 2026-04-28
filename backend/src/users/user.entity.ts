@@ -34,6 +34,12 @@ export class User {
   @Column({ name: 'must_change_password', default: false })
   mustChangePassword!: boolean;
 
+  @Column({ name: 'reset_password_token_hash', type: 'text', nullable: true })
+resetPasswordTokenHash?: string | null;
+
+@Column({ name: 'reset_password_expires_at', type: 'timestamp', nullable: true })
+resetPasswordExpiresAt?: Date | null;
+
   @OneToOne(() => Employee, (employee) => employee.user, {
     nullable: true,
     onDelete: 'CASCADE',

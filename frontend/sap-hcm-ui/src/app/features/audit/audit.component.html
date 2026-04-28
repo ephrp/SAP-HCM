@@ -1,0 +1,102 @@
+<section class="audit">
+  <div class="audit__header">
+    <div>
+      <p class="eyebrow">Historique RH</p>
+      <h1>Audit Logs</h1>
+      <p>Suivi des actions importantes effectuées dans PeopleFlow.</p>
+    </div>
+
+    <button class="refresh-btn" type="button" (click)="loadLogs()">
+      Actualiser
+    </button>
+  </div>
+
+  <div class="stats">
+    <article class="stat-card">
+      <span>Total</span>
+      <strong>{{ logs.length }}</strong>
+    </article>
+
+    <article class="stat-card">
+      <span>Congés</span>
+      <strong>{{ leaveCount }}</strong>
+    </article>
+
+    <article class="stat-card">
+      <span>Formations</span>
+      <strong>{{ trainingCount }}</strong>
+    </article>
+
+    <article class="stat-card">
+      <span>Comptes</span>
+      <strong>{{ accountCount }}</strong>
+    </article>
+  </div>
+
+  <div class="toolbar">
+    <input
+      type="text"
+      placeholder="Rechercher une action, un email, un message..."
+      [(ngModel)]="searchTerm"
+    />
+
+    <select [(ngModel)]="selectedAction">
+      <option *ngFor="let action of actions" [value]="action">
+        {{ action === 'ALL' ? 'Toutes les actions' : getActionLabel(action) }}
+      </option>
+    </select>
+  </div>
+
+  <div class="state" *ngIf="isLoading">Chargement des logs...</div>
+
+  <div class="state state--error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <div class="table-card" *ngIf="!isLoading && !errorMessage">
+    <table>
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Message</th>
+          <th>Acteur</th>
+          <th>Cible</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngFor="let log of filteredLogs">
+          <td>
+            <span [class]="getActionClass(log.action)">
+              {{ getActionIcon(log.action) }}
+              {{ getActionLabel(log.action) }}
+            </span>
+          </td>
+
+          <td class="message">{{ log.message }}</td>
+
+          <td>
+            <span class="actor">
+              {{ log.actorEmail || 'Système' }}
+            </span>
+          </td>
+
+          <td>
+            <span class="target">
+              {{ log.targetType }} #{{ log.targetId || '-' }}
+            </span>
+          </td>
+
+          <td class="date">
+            {{ log.createdAt | date:'medium' }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="empty" *ngIf="filteredLogs.length === 0">
+      Aucun log ne correspond à ta recherche.
+    </div>
+  </div>
+</section>

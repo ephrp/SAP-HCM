@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './jwt.strategy';
+import { MailModule } from '../mail/mail.module';
 
 const JWT_SECRET = 'fallback_secret_change_me';
 
@@ -13,6 +14,7 @@ const JWT_SECRET = 'fallback_secret_change_me';
   imports: [
     UsersModule,
     PassportModule,
+    MailModule,
     JwtModule.register({
       secret: JWT_SECRET,
       signOptions: {
